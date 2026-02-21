@@ -90,9 +90,17 @@ export class Figure {
       
       if (otherData instanceof Figure) {
         const otherPos = other.getPosition();
-        // If the other figure's center is above this one
-        if (otherPos.y > pos.y + 0.5) { // 0.5 is half a block height buffer
-          pressure += other.getMass();
+        const delta = Vec2.sub(otherPos, pos);
+        const dist = delta.length();
+        
+        if (dist > 0.01) {
+          const dirY = delta.y / dist;
+          // Downwardness: 1 if directly above, 0 if on the side or below
+          const downwardness = Math.max(0, dirY);
+          // Proximity: higher weight for closer figures
+          const proximity = 1.0 / (1.0 + dist);
+          
+          pressure += other.getMass() * downwardness * proximity;
         }
       }
     }

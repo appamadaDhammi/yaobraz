@@ -46,7 +46,7 @@ export const MOUSE_JOINT_FREQUENCY = 15;
 export const MOUSE_JOINT_DAMPING = 0.9;
 
 /** Коэффициент экспоненциального затухания силы от давления (веса сверху) */
-export const RUBBLE_DAMPING_FACTOR = 0.6;
+export const RUBBLE_DAMPING_FACTOR = 1.6;
 
 /** Минимальная сила MouseJoint, чтобы фигура не застревала совсем */
 export const MIN_MOUSE_JOINT_FORCE = 50;
