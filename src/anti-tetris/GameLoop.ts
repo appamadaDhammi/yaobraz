@@ -99,12 +99,73 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private setupWalls() {
     this.ground = this.world.createBody();
     this.ground.setUserData('wall');
-    // Bottom (ULTRA thick box prevents tunneling even under extreme pressure)
-    this.ground.createFixture(new Box(this.width / 2, 25, new Vec2(this.width / 2, -25)), 0);
-    // Left
+    // Simple thick floor — real tunneling prevention is in onPostStep()
+    this.ground.createFixture(new Box(this.width / 2, 10, new Vec2(this.width / 2, -10)), 0);
+    // Left wall
     this.ground.createFixture(new Box(10, this.height, new Vec2(-10, this.height)), 0);
-    // Right
+    // Right wall
     this.ground.createFixture(new Box(10, this.height, new Vec2(this.width + 10, this.height)), 0);
+  }
+
+  /**
+   * Runs after EVERY physics sub-step. This is the hard constraint that
+   * absolutely prevents figures from falling through the floor, regardless
+   * of solver accuracy.
+   */
+  protected override onPostStep() {
+    if (!this.mouseJoint) return;
+    const body = this.mouseJoint.getBodyB();
+    const pos = body.getPosition();
+    const angle = body.getAngle();
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    // Find the extreme world-space positions across all fixture vertices
+    let lowestY = pos.y;
+    let leftmostX = pos.x;
+    let rightmostX = pos.x;
+    for (let f = body.getFixtureList(); f; f = f.getNext()) {
+      const shape = f.getShape() as any;
+      const verts = shape.m_vertices;
+      if (!verts) continue;
+      for (const v of verts) {
+        const worldX = pos.x + v.x * cosA - v.y * sinA;
+        const worldY = pos.y + v.x * sinA + v.y * cosA;
+        if (worldY < lowestY) lowestY = worldY;
+        if (worldX < leftmostX) leftmostX = worldX;
+        if (worldX > rightmostX) rightmostX = worldX;
+      }
+    }
+
+    let newX = pos.x;
+    let newY = pos.y;
+    let changed = false;
+
+    // Floor clamp
+    if (lowestY < 0.05) {
+      newY += 0.05 - lowestY;
+      changed = true;
+    }
+    // Left wall clamp
+    if (leftmostX < 0.05) {
+      newX += 0.05 - leftmostX;
+      changed = true;
+    }
+    // Right wall clamp
+    if (rightmostX > this.width - 0.05) {
+      newX -= rightmostX - (this.width - 0.05);
+      changed = true;
+    }
+
+    if (changed) {
+      body.setPosition(new Vec2(newX, newY));
+      const vel = body.getLinearVelocity();
+      const clampedVx = (leftmostX < 0.05 && vel.x < 0) || (rightmostX > this.width - 0.05 && vel.x > 0) ? 0 : vel.x;
+      const clampedVy = lowestY < 0.05 && vel.y < 0 ? 0 : vel.y;
+      if (clampedVx !== vel.x || clampedVy !== vel.y) {
+        body.setLinearVelocity(new Vec2(clampedVx, clampedVy));
+      }
+    }
   }
 
   private spawnInitialFigures() {
@@ -216,6 +277,20 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
     }
 
+    // Velocity cap (extra safety, main protection is in onPostStep)
+    for (const figure of this.figures) {
+      if (!figure.body) continue;
+      const vel = figure.body.getLinearVelocity();
+      const speedSq = vel.lengthSquared();
+      if (speedSq > Settings.MAX_FIGURE_VELOCITY * Settings.MAX_FIGURE_VELOCITY) {
+        const speed = Math.sqrt(speedSq);
+        figure.body.setLinearVelocity(new Vec2(
+          (vel.x / speed) * Settings.MAX_FIGURE_VELOCITY,
+          (vel.y / speed) * Settings.MAX_FIGURE_VELOCITY
+        ));
+      }
+    }
+
     // Refill check
     if (this.figures.length <= Settings.MIN_FIGURES_TO_REFILL) {
       this.refill();
@@ -256,18 +331,14 @@ export class AntiTetrisLoop extends PhysicsWorld {
         this.mouseJoint = null;
       }
 
-      const pos = new Vec2(
-        Math.max(1, Math.min(this.width - 1, input.x)),
-        Math.max(2, input.y) // Increase to 2.0 to safely clear floor for most shapes
-      );
-      // Iterate backwards to find the one "on top"
+      // First pass: find hit figure
       let hitFigure: Figure | null = null;
       for (let i = this.figures.length - 1; i >= 0; i--) {
         const figure = this.figures[i];
         if (figure) {
           let hit = false;
           for (let f = figure.body.getFixtureList(); f; f = f.getNext()) {
-            if (f.testPoint(pos)) {
+            if (f.testPoint(new Vec2(input.x, input.y))) { // Note: using raw input for initial hit test
               hit = true;
               break;
             }
@@ -283,11 +354,18 @@ export class AntiTetrisLoop extends PhysicsWorld {
         if (typeof hitFigure.initPressureSmoothing === 'function') {
           hitFigure.initPressureSmoothing();
         }
+        
+        const safetyOffset = hitFigure.getMaxBottomOffset();
+        const clampedPos = new Vec2(
+          Math.max(1, Math.min(this.width - 1, input.x)),
+          Math.max(safetyOffset + 0.2, input.y)
+        );
+
         const def: MouseJointDef = {
           maxForce: Settings.MOUSE_JOINT_MAX_FORCE,
           frequencyHz: Settings.MOUSE_JOINT_FREQUENCY,
           dampingRatio: Settings.MOUSE_JOINT_DAMPING,
-          target: pos,
+          target: clampedPos,
           bodyA: this.ground,
           bodyB: hitFigure.body,
         };
@@ -297,9 +375,13 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
 
     if (input.isPressed && this.mouseJoint) {
+      const figureBody = this.mouseJoint.getBodyB();
+      const figure = figureBody.getUserData() as Figure;
+      const safetyOffset = figure.getMaxBottomOffset();
+
       this.mouseJoint.setTarget(new Vec2(
         Math.max(1, Math.min(this.width - 1, input.x)),
-        Math.max(2, input.y)
+        Math.max(safetyOffset + 0.2, input.y)
       ));
     }
 

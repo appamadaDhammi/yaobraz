@@ -98,4 +98,20 @@ export class Figure {
     }
     return pressure;
   }
+
+  public getMaxBottomOffset(): number {
+    const coords = SHAPES[this.shape];
+    const offsetX = coords.reduce((acc, c) => acc + (c[0] ?? 0), 0) / coords.length;
+    const offsetY = coords.reduce((acc, c) => acc + (c[1] ?? 0), 0) / coords.length;
+    
+    let maxR = 0;
+    for (const [cx, cy] of coords) {
+      const rx = (cx ?? 0) - offsetX;
+      const ry = (cy ?? 0) - offsetY;
+      // Distance from center to further corner of this block
+      const r = Math.sqrt(rx * rx + ry * ry) + 0.71; // 0.71 is approx half-diagonal of 1x1 block
+      maxR = Math.max(maxR, r);
+    }
+    return maxR;
+  }
 }

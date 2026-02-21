@@ -40,10 +40,10 @@ export const FIGURE_SHAPES = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'] as const;
 export const MOUSE_JOINT_MAX_FORCE = 1000;
 
 /** Частота отклика MouseJoint (частота колебаний) */
-export const MOUSE_JOINT_FREQUENCY = 5;
+export const MOUSE_JOINT_FREQUENCY = 15;
 
 /** Коэффициент демпфирования MouseJoint (0-1) */
-export const MOUSE_JOINT_DAMPING = 0.7;
+export const MOUSE_JOINT_DAMPING = 0.9;
 
 /** На сколько уменьшается сила за единицу давления (веса сверху) */
 export const RUBBLE_DAMPING_FACTOR = 300;
@@ -89,3 +89,6 @@ export const FIGURE_LINEAR_DAMPING = 0.1;
 
 /** Затухание угловой скорости фигуры */
 export const FIGURE_ANGULAR_DAMPING = 0.1;
+
+/** Максимальная линейная скорость фигуры (предотвращает туннелирование) */
+export const MAX_FIGURE_VELOCITY = 20;

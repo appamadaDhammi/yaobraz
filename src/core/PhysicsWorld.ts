@@ -24,11 +24,15 @@ export abstract class PhysicsWorld {
     this.accumulator += deltaTime;
     while (this.accumulator >= this.timeStep) {
       this.world.step(this.timeStep, 10, 10);
+      this.onPostStep(); // Run after EVERY sub-step for position clamping
       this.accumulator -= this.timeStep;
     }
     
     this.onUpdate();
   }
+
+  /** Called after every physics sub-step. Override to clamp positions etc. */
+  protected onPostStep(): void {}
 
   protected abstract onUpdate(): void;
 
