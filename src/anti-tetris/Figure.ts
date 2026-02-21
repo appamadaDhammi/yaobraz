@@ -1,5 +1,6 @@
 import { World, Vec2, Polygon, type BodyDef, type FixtureDef } from 'planck';
 import { type FigureShape, type FigureColor } from './Settings';
+import * as Settings from './Settings';
 
 const SHAPES: Record<FigureShape, number[][]> = {
   I: [[0, 0], [0, 1], [0, 2], [0, 3]],
@@ -26,8 +27,8 @@ export class Figure {
       type: 'dynamic',
       position: new Vec2(x, y),
       allowSleep: true,
-      linearDamping: 0.1,
-      angularDamping: 0.1,
+      linearDamping: Settings.FIGURE_LINEAR_DAMPING,
+      angularDamping: Settings.FIGURE_ANGULAR_DAMPING,
     };
 
     this.body = world.createBody(bodyDef);
@@ -46,8 +47,8 @@ export class Figure {
           new Vec2((cx ?? 0) - offsetX - 0.5, (cy ?? 0) - offsetY + 0.5),
         ]),
         density: 1.0,
-        friction: 0.3,
-        restitution: 0.1,
+        friction: Settings.FIGURE_FRICTION,
+        restitution: Settings.FIGURE_RESTITUTION,
       };
       this.body.createFixture(fixtureDef);
     }

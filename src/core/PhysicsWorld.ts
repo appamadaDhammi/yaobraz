@@ -5,6 +5,7 @@ export abstract class PhysicsWorld {
   protected lastTime: number = 0;
   private accumulator: number = 0;
   private readonly timeStep: number = 1 / 60;
+  public timeScale: number = 1.0;
 
   constructor(gravity: Vec2 = new Vec2(0, -9.8)) {
     this.world = new World(gravity);
@@ -16,7 +17,7 @@ export abstract class PhysicsWorld {
       return;
     }
 
-    const deltaTime = (currentTime - this.lastTime) / 1000;
+    const deltaTime = ((currentTime - this.lastTime) / 1000) * this.timeScale;
     this.lastTime = currentTime;
 
     // Fixed time step update

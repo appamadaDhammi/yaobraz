@@ -1,4 +1,4 @@
-import { Vec2, Edge } from 'planck';
+import { Vec2, Edge, MouseJoint, type MouseJointDef } from 'planck';
 import { PhysicsWorld } from '../core/PhysicsWorld';
 import { Figure } from './Figure';
 import * as Settings from './Settings';
@@ -31,6 +31,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.width = width;
     this.height = height;
     this.isSlowInit = isSlowInit;
+    this.timeScale = Settings.GAME_SPEED * Settings.PHYSICS_SPEED;
     
     this.state = {
       score: 0,
@@ -163,7 +164,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.checkAndSpawnNext();
 
     // Update timer
-    this.state.timer -= 1/60; // Assuming 60fps
+    this.state.timer -= (1 / 60) * Settings.GAME_SPEED; // Assuming 60fps, scale with GAME_SPEED
     if (this.state.timer <= 0) {
       this.state.timer = 0;
       this.state.isGameOver = true;
@@ -234,35 +235,58 @@ export class AntiTetrisLoop extends PhysicsWorld {
     if (this.state.isGameOver) return;
 
     if (input.justPressed) {
-      // Find figure under world coordinates
+      if (this.mouseJoint) {
+        this.world.destroyJoint(this.mouseJoint);
+        this.mouseJoint = null;
+      }
+
       const pos = new Vec2(input.x, input.y);
       // Iterate backwards to find the one "on top"
+      let hitFigure: Figure | null = null;
       for (let i = this.figures.length - 1; i >= 0; i--) {
         const figure = this.figures[i];
-        if (figure && figure.body.getFixtureList().testPoint(pos)) {
-          this.grabbedFigure = figure;
-          break;
+        if (figure) {
+          let hit = false;
+          for (let f = figure.body.getFixtureList(); f; f = f.getNext()) {
+            if (f.testPoint(pos)) {
+              hit = true;
+              break;
+            }
+          }
+          if (hit) {
+            hitFigure = figure;
+            break;
+          }
         }
+      }
+
+      if (hitFigure) {
+        const def: MouseJointDef = {
+          maxForce: Settings.MOUSE_JOINT_MAX_FORCE,
+          frequencyHz: Settings.MOUSE_JOINT_FREQUENCY,
+          dampingRatio: Settings.MOUSE_JOINT_DAMPING,
+          target: pos,
+          bodyA: this.ground,
+          bodyB: hitFigure.body,
+        };
+        this.mouseJoint = this.world.createJoint(new MouseJoint(def)) as MouseJoint;
+        hitFigure.body.setAwake(true);
       }
     }
 
-    if (input.isPressed && this.grabbedFigure) {
-      const targetPos = new Vec2(input.x, input.y);
-      const currentPos = this.grabbedFigure.body.getPosition();
-      const direction = targetPos.sub(currentPos);
-      
-      // Apply force towards the finger
-      // Scaling force by distance?
-      direction.mul(Settings.GRAB_FORCE);
-      this.grabbedFigure.body.applyForceToCenter(direction, true);
+    if (input.isPressed && this.mouseJoint) {
+      this.mouseJoint.setTarget(new Vec2(input.x, input.y));
     }
 
-    if (input.justReleased) {
-      this.grabbedFigure = null;
+    if (input.justReleased || !input.isPressed) {
+      if (this.mouseJoint) {
+        this.world.destroyJoint(this.mouseJoint);
+        this.mouseJoint = null;
+      }
     }
   }
 
-  private grabbedFigure: Figure | null = null;
+  private mouseJoint: MouseJoint | null = null;
 
   public getState(): GameState {
     return this.state;

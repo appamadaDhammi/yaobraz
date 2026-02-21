@@ -1,5 +1,11 @@
 /** Длительность раунда в секундах */
-export const GAME_DURATION = 60;
+export const GAME_DURATION = 600;
+
+/** Множитель скорости игры (влияет на всё) */
+export const GAME_SPEED = 1.0;
+
+/** Множитель скорости физики (влияет только на движение) */
+export const PHYSICS_SPEED = 2.0;
 
 /** Минимальное кол-во фигур для вызова пополнения */
 export const MIN_FIGURES_TO_REFILL = 3;
@@ -30,8 +36,17 @@ export const FIGURE_COLORS = [
 /** Типы фигур */
 export const FIGURE_SHAPES = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'] as const;
 
-/** Сила захвата фигуры (impulse magnitude) */
-export const GRAB_FORCE = 60;
+/** Максимальная сила MouseJoint */
+export const MOUSE_JOINT_MAX_FORCE = 1000;
+
+/** Частота отклика MouseJoint (частота колебаний) */
+export const MOUSE_JOINT_FREQUENCY = 5;
+
+/** Коэффициент демпфирования MouseJoint (0-1) */
+export const MOUSE_JOINT_DAMPING = 0.7;
+
+/** Сила захвата фигуры (impulse magnitude) - LEGACY */
+export const LEGACY_GRAB_FORCE = 60;
 
 /** Множитель затухания для нецелевых фигур (0–1, меньше = быстрее тормозит) */
 export const WRONG_FIGURE_DRAG = 0.3;
@@ -53,3 +68,15 @@ export const GRAVITY_DELAY_SEC = 2.0;
 
 /** Стандартная сила гравитации */
 export const DEFAULT_GRAVITY = -10;
+
+/** Поверхностное трение фигур */
+export const FIGURE_FRICTION = 0.3;
+
+/** Упругость фигур (0-1, bounciness) */
+export const FIGURE_RESTITUTION = 0.1;
+
+/** Затухание линейной скорости фигуры */
+export const FIGURE_LINEAR_DAMPING = 0.1;
+
+/** Затухание угловой скорости фигуры */
+export const FIGURE_ANGULAR_DAMPING = 0.1;
