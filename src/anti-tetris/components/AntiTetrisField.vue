@@ -43,14 +43,16 @@ onMounted(() => {
   if (!canvas.value || !container.value) return;
 
   const rect = container.value.getBoundingClientRect();
-  const width = rect.width / Settings.WORLD_SCALE;
-  const height = rect.height / Settings.WORLD_SCALE;
+  const width = Settings.FIELD_WIDTH;
+  const dynamicScale = rect.width / width;
+  const height = rect.height / dynamicScale;
 
   canvas.value.width = rect.width;
   canvas.value.height = rect.height;
 
-  loop = new AntiTetrisLoop(width, height);
-  input = new InputHandler(canvas.value, Settings.WORLD_SCALE);
+  const isSlowInit = window.location.hash.includes('slowInit=1');
+  loop = new AntiTetrisLoop(width, height, isSlowInit);
+  input = new InputHandler(canvas.value, dynamicScale);
 
   const ctx = canvas.value.getContext('2d');
   if (!ctx) return;
@@ -65,7 +67,7 @@ onMounted(() => {
     Object.assign(state, loopState);
     emit('update-state', { ...loopState });
 
-    render(ctx, width, height);
+    render(ctx, width, height, dynamicScale);
     rafId = requestAnimationFrame(frame);
   };
 
@@ -76,10 +78,10 @@ onUnmounted(() => {
   cancelAnimationFrame(rafId);
 });
 
-const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number) => {
+const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number, scale: number) => {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   
-  const scale = Settings.WORLD_SCALE;
+  // Use passed scale
   
   // Flip Y axis
   ctx.save();

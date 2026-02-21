@@ -19,14 +19,18 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private width: number;
   private height: number;
   private ground: any;
-  private gravityDelay: number;
-  private gravityEnabled: boolean = false;
+  private isSlowInit: boolean;
+  private isInitializing: boolean = false;
+  private isWaitingForHit: boolean = false;
+  private hitDetectedDuringStep: boolean = false;
+  private initialSpawnsLeft: number = 0;
+  private lastSpawnedFigure: Figure | null = null;
 
-  constructor(width: number, height: number) {
-    super(new Vec2(0, 0)); // Start with no gravity
+  constructor(width: number, height: number, isSlowInit: boolean = false) {
+    super(new Vec2(0, Settings.DEFAULT_GRAVITY));
     this.width = width;
     this.height = height;
-    this.gravityDelay = Settings.GRAVITY_DELAY_SEC;
+    this.isSlowInit = isSlowInit;
     
     this.state = {
       score: 0,
@@ -39,12 +43,61 @@ export class AntiTetrisLoop extends PhysicsWorld {
     };
 
     this.setupWalls();
+    this.setupContactListener();
     this.spawnInitialFigures();
     this.updateTarget();
+
+    if (!this.isSlowInit && this.isInitializing) {
+      this.precomputeInitialization();
+    }
+  }
+
+  private setupContactListener() {
+    this.world.on('begin-contact', (contact) => {
+      if (this.isInitializing && this.isWaitingForHit && this.lastSpawnedFigure) {
+        const fixtureA = contact.getFixtureA();
+        const fixtureB = contact.getFixtureB();
+        const bodyA = fixtureA.getBody();
+        const bodyB = fixtureB.getBody();
+        const dataA = bodyA.getUserData();
+        const dataB = bodyB.getUserData();
+
+        // One of the bodies MUST be the last spawned figure
+        const isLastFigureA = bodyA === this.lastSpawnedFigure.body;
+        const isLastFigureB = bodyB === this.lastSpawnedFigure.body;
+
+        if (isLastFigureA || isLastFigureB) {
+          const otherData = isLastFigureA ? dataB : dataA;
+          // The other body MUST be a solid object: another Figure OR a wall
+          if (otherData instanceof Figure || otherData === 'wall') {
+            this.hitDetectedDuringStep = true;
+          }
+        }
+      }
+    });
+  }
+
+  private precomputeInitialization() {
+    const timeStep = 1 / 60;
+    let safetyCounter = 0;
+    while (this.isInitializing && safetyCounter < 1000) {
+      this.world.step(timeStep);
+      this.checkAndSpawnNext();
+      safetyCounter++;
+    }
+  }
+
+  private checkAndSpawnNext() {
+    if (this.hitDetectedDuringStep) {
+      this.hitDetectedDuringStep = false;
+      this.isWaitingForHit = false;
+      this.spawnNextSequential();
+    }
   }
 
   private setupWalls() {
     this.ground = this.world.createBody();
+    this.ground.setUserData('wall');
     // Bottom
     this.ground.createFixture(new Edge(new Vec2(0, 0), new Vec2(this.width, 0)), 0);
     // Left
@@ -54,19 +107,27 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   private spawnInitialFigures() {
-    const margin = this.width * 0.15; // 15% margin
-    const startX = margin;
-    const endX = this.width - margin;
-    const stepX = (endX - startX) / (Settings.FIGURES_PER_REFILL - 1);
-    const middleY = this.height / 2;
+    this.isInitializing = true;
+    this.initialSpawnsLeft = Settings.FIGURES_PER_REFILL;
+    this.spawnNextSequential();
+  }
 
-    for (let i = 0; i < Settings.FIGURES_PER_REFILL; i++) {
-      const x = startX + i * stepX;
-      this.spawnFigure(x, middleY);
+  private spawnNextSequential() {
+    if (this.initialSpawnsLeft > 0) {
+      if (!this.isWaitingForHit) {
+        this.isWaitingForHit = true;
+        const margin = this.width * 0.2;
+        const x = margin + Math.random() * (this.width - margin * 2);
+        const y = this.height + 2; // Spawn above
+        this.lastSpawnedFigure = this.spawnFigure(x, y);
+        this.initialSpawnsLeft--;
+      }
+    } else {
+      this.isInitializing = false;
     }
   }
 
-  private spawnFigure(customX?: number, customY?: number) {
+  private spawnFigure(customX?: number, customY?: number): Figure {
     const shape = Settings.FIGURE_SHAPES[Math.floor(Math.random() * Settings.FIGURE_SHAPES.length)];
     const color = Settings.FIGURE_COLORS[Math.floor(Math.random() * Settings.FIGURE_COLORS.length)];
     const x = customX !== undefined ? customX : Math.random() * (this.width - 4) + 2;
@@ -78,6 +139,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
     const figure = new Figure(this.world, shape!, color!, x, y, hasCoin);
     this.figures.push(figure);
+    return figure;
   }
 
   private updateTarget() {
@@ -98,18 +160,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
   protected onUpdate() {
     if (this.state.isGameOver) return;
 
-    // Gravity delay handling
-    if (!this.gravityEnabled) {
-      this.gravityDelay -= 1/60;
-      if (this.gravityDelay <= 0) {
-        this.gravityEnabled = true;
-        this.world.setGravity(new Vec2(0, Settings.DEFAULT_GRAVITY));
-        // Wake up all bodies when gravity shifts
-        for (const figure of this.figures) {
-          figure.body.setAwake(true);
-        }
-      }
-    }
+    this.checkAndSpawnNext();
 
     // Update timer
     this.state.timer -= 1/60; // Assuming 60fps
@@ -119,26 +170,29 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
 
     // Check figures out of bounds (thrown upwards)
-    for (let i = this.figures.length - 1; i >= 0; i--) {
-      const figure = this.figures[i];
-      if (figure?.body) {
-        const pos = figure.body.getPosition();
-        
-        // If figure is above the container
-        if (pos.y > this.height) {
-          this.handleFigureThrown(figure, i);
-        }
+    // SKIP this check during initialization to prevent scoring bugs
+    if (!this.isInitializing) {
+      for (let i = this.figures.length - 1; i >= 0; i--) {
+        const figure = this.figures[i];
+        if (figure?.body) {
+          const pos = figure.body.getPosition();
+          
+          // If figure is above the container
+          if (pos.y > this.height) {
+            this.handleFigureThrown(figure, i);
+          }
 
         // Blocking logic: figure is moving up but hindered by others?
         // Actually Planck handles collisions, but we might want to apply DRAG in the top zone.
-        if (pos.y > this.height * (1 - Settings.DRAG_ZONE_RATIO) && pos.y <= this.height) {
-          const isTarget = figure.shape === this.state.targetShape && 
-                           (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
-          
-          if (!isTarget) {
-            const vel = figure.body.getLinearVelocity();
-            if (vel.y > 0) {
-              figure.body.setLinearVelocity(new Vec2(vel.x, vel.y * Settings.WRONG_FIGURE_DRAG));
+          if (pos.y > this.height * (1 - Settings.DRAG_ZONE_RATIO) && pos.y <= this.height) {
+            const isTarget = figure.shape === this.state.targetShape && 
+                             (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
+            
+            if (!isTarget) {
+              const vel = figure.body.getLinearVelocity();
+              if (vel.y > 0) {
+                figure.body.setLinearVelocity(new Vec2(vel.x, vel.y * Settings.WRONG_FIGURE_DRAG));
+              }
             }
           }
         }

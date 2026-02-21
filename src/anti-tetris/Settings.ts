@@ -31,7 +31,7 @@ export const FIGURE_COLORS = [
 export const FIGURE_SHAPES = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'] as const;
 
 /** Сила захвата фигуры (impulse magnitude) */
-export const GRAB_FORCE = 12;
+export const GRAB_FORCE = 60;
 
 /** Множитель затухания для нецелевых фигур (0–1, меньше = быстрее тормозит) */
 export const WRONG_FIGURE_DRAG = 0.3;
@@ -45,7 +45,8 @@ export const HINT_TEXT = 'кидай вверх';
 export type FigureShape = (typeof FIGURE_SHAPES)[number];
 export type FigureColor = (typeof FIGURE_COLORS)[number];
 
-export const WORLD_SCALE = 30; // 30 pixels per meter
+export const WORLD_SCALE = 30; // 30 pixels per meter (LEGACY, to be removed)
+export const FIELD_WIDTH = 9; // target width in game units
 
 /** Задержка перед включением гравитации (сек) */
 export const GRAVITY_DELAY_SEC = 2.0;
