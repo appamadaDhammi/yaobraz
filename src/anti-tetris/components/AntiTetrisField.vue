@@ -19,6 +19,17 @@ import { AntiTetrisLoop } from '../GameLoop';
 import type { GameState } from '../GameLoop';
 import { InputHandler } from '../../core/InputHandler';
 import * as Settings from '../Settings';
+import { type FigureColor } from '../Settings';
+
+const textureImages: Record<string, HTMLImageElement> = {};
+
+const preloadTextures = () => {
+  Object.entries(Settings.TEXTURE_MAP).forEach(([color, path]) => {
+    const img = new Image();
+    img.src = path;
+    textureImages[color] = img;
+  });
+};
 
 const container = ref<HTMLElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -40,6 +51,7 @@ const state = reactive<GameState>({
 const emit = defineEmits(['update-state']);
 
 onMounted(() => {
+  preloadTextures();
   if (!canvas.value || !container.value) return;
 
   const rect = container.value.getBoundingClientRect();
@@ -108,11 +120,21 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
       }
       ctx.closePath();
 
-      ctx.fillStyle = figure.color;
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      const img = textureImages[figure.color as FigureColor];
+      if (img && img.complete) {
+        // Find the bounding box of the fixture to draw the texture
+        const verts = shape.m_vertices;
+        let minX = verts[0].x;
+        let minY = verts[0].y;
+        for (let i = 1; i < verts.length; i++) {
+          minX = Math.min(minX, verts[i].x);
+          minY = Math.min(minY, verts[i].y);
+        }
+        ctx.drawImage(img, minX * scale, minY * scale, 1 * scale, 1 * scale);
+      } else {
+        ctx.fillStyle = Settings.TEXTURE_COLORS[figure.color as FigureColor] || '#fff';
+        ctx.fill();
+      }
     }
 
     // Coin - draw once per figure at the center of the body

@@ -22,16 +22,36 @@ export const COIN_SECOND_BONUS_CHANCE = 0.1;
 /** Очки за одну правильную фигуру (множится на уровень) */
 export const POINTS_PER_FIGURE = 100;
 
-/** Палитра цветов фигур */
+/** Палитра цветов фигур (теперь ключи текстур) */
 export const FIGURE_COLORS = [
-  '#00f0f0', // I — cyan
-  '#f0f000', // O — yellow
-  '#a000f0', // T — purple
-  '#00f000', // S — green
-  '#f00000', // Z — red
-  '#f0a000', // L — orange
-  '#0000f0', // J — blue
+  'blue',
+  'orange',
+  'red',
+  'yellow',
+  'red-yellow',
+  'yellow-blue',
 ] as const;
+
+/** Маппинг ключей на пути к текстурам */
+export const TEXTURE_MAP: Record<(typeof FIGURE_COLORS)[number], string> = {
+  'blue': '/src/anti-tetris/assets/block/block__blue.png',
+  'orange': '/src/anti-tetris/assets/block/block__orange.png',
+  'red': '/src/anti-tetris/assets/block/block__red.png',
+  'yellow': '/src/anti-tetris/assets/block/block__yellow.png',
+  'red-yellow': '/src/anti-tetris/assets/block/block__red-yellow.png',
+  'yellow-blue': '/src/anti-tetris/assets/block/block__yellow-blue.png',
+};
+
+/** Гекс-цвета для UI (соответствующие текстурам) */
+export const TEXTURE_COLORS: Record<(typeof FIGURE_COLORS)[number] | 'white', string> = {
+  'blue': '#00B4FF',
+  'orange': '#FF9600',
+  'red': '#FF4B4B',
+  'yellow': '#FFD200',
+  'red-yellow': '#FF7800', // смесь
+  'yellow-blue': '#00D2FF', // смесь
+  'white': '#FFFFFF',
+};
 
 /** Типы фигур */
 export const FIGURE_SHAPES = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'] as const;

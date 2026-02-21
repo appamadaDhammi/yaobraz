@@ -196,8 +196,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
     const y = customY !== undefined ? customY : this.height + Math.random() * 5; // Spawn above the field or in the container
     
     // Coin chance
-    const coinChance = this.state.level === 1 ? 1 : 1 / this.state.level;
-    const hasCoin = Math.random() < coinChance;
+    // const coinChance = this.state.level === 1 ? 1 : 1 / this.state.level;
+    const hasCoin = Math.random() < .5;
 
     const figure = new Figure(this.world, shape!, color!, x, y, hasCoin);
     this.figures.push(figure);

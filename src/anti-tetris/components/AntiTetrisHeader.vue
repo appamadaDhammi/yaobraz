@@ -17,7 +17,7 @@
           <div 
             class="TargetBox__figure" 
             :class="{ 'is-white': targetColor === 'white' }"
-            :style="{ color: targetColor === 'white' ? '#fff' : targetColor }"
+            :style="{ color: targetColor === 'white' ? '#fff' : Settings.TEXTURE_COLORS[targetColor as FigureColor] }"
             v-html="getFigureIcon(targetShape)"
           >
           </div>
@@ -34,6 +34,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { FigureShape, FigureColor } from '../Settings';
+import * as Settings from '../Settings';
 
 const props = defineProps<{
   timer: number;
