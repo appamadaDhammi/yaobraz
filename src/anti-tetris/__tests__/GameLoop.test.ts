@@ -165,3 +165,46 @@ describe('AntiTetrisLoop – game over', () => {
     expect(loop.getState().timer).toBe(0);
   });
 });
+
+describe('AntiTetrisLoop – OOB safeguards', () => {
+  it('removes figures that fall below the floor', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    // Ensure initialization is done
+    const fps60 = 1000 / 60;
+    loop.step(0);
+    for (let i = 0; i < 10; i++) loop.step((i + 1) * fps60);
+
+    const figures = loop.getFigures();
+    const firstFigure = figures[0]!;
+    
+    // Teleport figure below floor
+    firstFigure.body.setPosition({ x: FIELD_W / 2, y: -10 });
+    
+    // Step to trigger onUpdate (OOB check)
+    // We need to run at least one step that updates the accumulator and calls onUpdate
+    loop.step(100 * fps60);
+    
+    expect(loop.getFigures()).not.toContain(firstFigure);
+  });
+
+  it('removes figures that fly too far sideways', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    // Ensure initialization is done
+    const fps60 = 1000 / 60;
+    loop.step(0);
+    for (let i = 0; i < 10; i++) loop.step((i + 1) * fps60);
+
+    const figures = loop.getFigures();
+    const firstFigure = figures[0]!;
+    
+    // Teleport figure far left
+    firstFigure.body.setPosition({ x: -FIELD_W - 5, y: FIELD_H / 2 });
+    
+    // Step to trigger onUpdate
+    loop.step(100 * fps60);
+    
+    expect(loop.getFigures()).not.toContain(firstFigure);
+  });
+});
+
+

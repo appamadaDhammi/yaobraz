@@ -60,10 +60,10 @@ export const TEXTURE_COLORS: Record<(typeof FIGURE_COLORS)[number] | 'white', st
 export const SHADOW_LIGHT_ANGLE = -Math.PI / 8 * 5;
 
 /** Коэффициент осветления для освещенных граней (0-1) */
-export const SHADOW_LIGHTEN_FACTOR = 0.45;
+export const SHADOW_LIGHTEN_FACTOR = 0.15;
 
 /** Коэффициент затемнения для теневых граней (0-1) */
-export const SHADOW_DARKEN_FACTOR = 0.20;
+export const SHADOW_DARKEN_FACTOR = 0.05;
 
 /** Типы фигур */
 export const FIGURE_SHAPES = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'] as const;

@@ -242,9 +242,18 @@ export class AntiTetrisLoop extends PhysicsWorld {
           // If figure is above the container
           if (pos.y > this.height) {
             this.handleFigureThrown(figure, i);
+            continue; // Figure destroyed, skip further checks
+          }
+
+          // OOB SAFEGUARD: Figure fell through floor or escaped walls
+          if (pos.y < -5 || pos.x < -this.width || pos.x > this.width * 2) {
+            figure.destroy(this.world);
+            this.figures.splice(i, 1);
+            continue;
           }
 
         // Blocking logic: figure is moving up but hindered by others?
+
         // Actually Planck handles collisions, but we might want to apply DRAG in the top zone.
           if (pos.y > this.height * (1 - Settings.DRAG_ZONE_RATIO) && pos.y <= this.height) {
             const isTarget = figure.shape === this.state.targetShape && 
