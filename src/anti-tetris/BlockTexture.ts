@@ -47,11 +47,21 @@ function darken(hex: string, amount: number): string {
   return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
 }
 
-/** Map a dot-product value to a colour: positive → lighten, negative → darken. */
+
+/** 
+ * Map a dot-product value to a colour:
+ * positive → l (lighten)
+ * near 0 → c (base color)
+ * slightly negative → d (darken)
+ * very negative → D (darkest)
+ */
 function edgeColor(base: string, dot: number): string {
-  if (dot > 0) return lighten(base, dot * Settings.SHADOW_LIGHTEN_FACTOR);
-  if (dot < 0) return darken(base, Math.abs(dot) * Settings.SHADOW_DARKEN_FACTOR);
-  return base;
+  if (dot > 0.1) return lighten(base, dot * Settings.SHADOW_LIGHTEN_FACTOR); // l
+  if (dot < -0.1) {
+    if (dot < -0.7) return darken(base, Math.abs(dot) * Settings.SHADOW_DARKEN_FACTOR * 1.5); // D
+    return darken(base, Math.abs(dot) * Settings.SHADOW_DARKEN_FACTOR); // d
+  }
+  return base; // c
 }
 
 // ---------------------------------------------------------------------------
@@ -59,18 +69,8 @@ function edgeColor(base: string, dot: number): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Draw one sub-cell of a block with dynamically computed edge shading.
- *
- * Dot values are the dot products of the physics edge normal (rotated by
- * the figure angle) with the light-source direction. Positive = lit,
- * negative = shadowed.
- *
- * Mapping between physics edges and texture-canvas positions accounts
- * for the game canvas Y-flip:
- *   physics top    → texture bottom strip
- *   physics bottom → texture top strip
- *   physics left   → texture left strip   (no X flip)
- *   physics right  → texture right strip
+ * Draw one sub-cell of a block with dynamically computed edge shading
+ * based on dot products with the light direction.
  */
 function drawShadedSubCell(
   ctx: CanvasRenderingContext2D,
@@ -85,43 +85,46 @@ function drawShadedSubCell(
 ) {
   const edge = Math.max(1, Math.round(size / 6));
 
-  // 1. Base fill
+  // 1. Base fill (center 'c')
   ctx.fillStyle = baseColor;
   ctx.fillRect(x, y, size, size);
 
-  // 2. Edge strips (physics direction → texture position)
+  // 2. Edge strips
+  const topC = edgeColor(baseColor, topDot);
+  const bottomC = edgeColor(baseColor, bottomDot);
+  const leftC = edgeColor(baseColor, leftDot);
+  const rightC = edgeColor(baseColor, rightDot);
 
-  // Physics top → texture bottom strip
-  ctx.fillStyle = edgeColor(baseColor, topDot);
+  // Physics top → texture bottom strip (Y-flip)
+  ctx.fillStyle = topC;
   ctx.fillRect(x, y + size - edge, size, edge);
 
   // Physics bottom → texture top strip
-  ctx.fillStyle = edgeColor(baseColor, bottomDot);
+  ctx.fillStyle = bottomC;
   ctx.fillRect(x, y, size, edge);
 
   // Physics left → texture left strip
-  ctx.fillStyle = edgeColor(baseColor, leftDot);
+  ctx.fillStyle = leftC;
   ctx.fillRect(x, y, edge, size);
 
   // Physics right → texture right strip
-  ctx.fillStyle = edgeColor(baseColor, rightDot);
+  ctx.fillStyle = rightC;
   ctx.fillRect(x + size - edge, y, edge, size);
 
-  // 3. Corner intersections (average of two adjacent edges)
-
-  // Physics top-left → texture bottom-left
+  // 3. Corners - average of the two adjacent edge dot products
+  // Physics TL → texture bottom-left
   ctx.fillStyle = edgeColor(baseColor, (topDot + leftDot) / 2);
   ctx.fillRect(x, y + size - edge, edge, edge);
 
-  // Physics top-right → texture bottom-right
+  // Physics TR → texture bottom-right
   ctx.fillStyle = edgeColor(baseColor, (topDot + rightDot) / 2);
   ctx.fillRect(x + size - edge, y + size - edge, edge, edge);
 
-  // Physics bottom-left → texture top-left
+  // Physics BL → texture top-left
   ctx.fillStyle = edgeColor(baseColor, (bottomDot + leftDot) / 2);
   ctx.fillRect(x, y, edge, edge);
 
-  // Physics bottom-right → texture top-right
+  // Physics BR → texture top-right
   ctx.fillStyle = edgeColor(baseColor, (bottomDot + rightDot) / 2);
   ctx.fillRect(x + size - edge, y, edge, edge);
 }
@@ -132,13 +135,6 @@ function drawShadedSubCell(
 
 /**
  * Generate a dynamic block texture for a figure at the given rotation angle.
- *
- * Call once per figure per frame — reuse across all fixtures of that figure.
- *
- * @param colorKey  Figure colour key (e.g. 'blue', 'red-yellow')
- * @param angle     Current physics body angle (radians)
- * @param size      Texture size in pixels (= 1 physics unit × scale)
- * @returns         An HTMLCanvasElement ready for drawImage
  */
 export function generateDynamicBlockTexture(
   colorKey: string,
@@ -150,7 +146,6 @@ export function generateDynamicBlockTexture(
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
 
-  // Determine sub-cell colours (screen-space quadrant positions)
   const mixedInfo = Settings.MIXED_COLOR_MAP[colorKey];
   let screenTL: string, screenTR: string, screenBL: string, screenBR: string;
 
@@ -179,16 +174,13 @@ export function generateDynamicBlockTexture(
   const bottomDot = ( sinA) * lx + (-cosA) * ly; // normal (0,-1) rotated
   const leftDot   = (-cosA) * lx + (-sinA) * ly; // normal (-1,0) rotated
 
-  // --- Draw 2×2 sub-cells ---
-  // Texture canvas is Y-down; game canvas is Y-flipped.
-  // texture (0,0) → screen bottom-left;  texture (0,half) → screen top-left
-  //
-  // So: screen-TL → texture (0, half)
-  //     screen-TR → texture (half, half)
-  //     screen-BL → texture (0, 0)
-  //     screen-BR → texture (half, 0)
-
   const half = size / 2;
+
+  // Texture canvas is Y-down; game canvas is Y-flipped.
+  // screenTL -> texture (0, half)
+  // screenTR -> texture (half, half)
+  // screenBL -> texture (0, 0)
+  // screenBR -> texture (half, 0)
 
   drawShadedSubCell(ctx, 0,    0,    half, screenBL, topDot, rightDot, bottomDot, leftDot);
   drawShadedSubCell(ctx, half, 0,    half, screenBR, topDot, rightDot, bottomDot, leftDot);

@@ -19,17 +19,7 @@ import { AntiTetrisLoop } from '../GameLoop';
 import type { GameState } from '../GameLoop';
 import { InputHandler } from '../../core/InputHandler';
 import * as Settings from '../Settings';
-import { type FigureColor } from '../Settings';
-
-const textureImages: Record<string, HTMLImageElement> = {};
-
-const preloadTextures = () => {
-  Object.entries(Settings.TEXTURE_MAP).forEach(([color, path]) => {
-    const img = new Image();
-    img.src = path;
-    textureImages[color] = img;
-  });
-};
+import { generateDynamicBlockTexture } from '../BlockTexture';
 
 const container = ref<HTMLElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
@@ -51,7 +41,6 @@ const state = reactive<GameState>({
 const emit = defineEmits(['update-state']);
 
 onMounted(() => {
-  preloadTextures();
   if (!canvas.value || !container.value) return;
 
   const rect = container.value.getBoundingClientRect();
@@ -103,6 +92,9 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
   for (const figure of loop.getFigures()) {
     const pos = figure.body.getPosition();
     const angle = figure.body.getAngle();
+
+    // Generate one texture per figure per frame (cached for all its fixtures)
+    const tex = generateDynamicBlockTexture(figure.color, angle, Math.round(scale));
     
     ctx.save();
     ctx.translate(pos.x * scale, pos.y * scale);
@@ -111,42 +103,27 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
     // Draw fixtures
     for (let f = figure.body.getFixtureList(); f; f = f.getNext()) {
       const shape = f.getShape() as any;
-      ctx.beginPath();
-      // Assume polygon for now
-      const vertices = shape.m_vertices;
-      ctx.moveTo(vertices[0].x * scale, vertices[0].y * scale);
-      for (let i = 1; i < vertices.length; i++) {
-        ctx.lineTo(vertices[i].x * scale, vertices[i].y * scale);
-      }
-      ctx.closePath();
+      const verts = shape.m_vertices;
 
-      const img = textureImages[figure.color as FigureColor];
-      if (img && img.complete) {
-        // Find the bounding box of the fixture to draw the texture
-        const verts = shape.m_vertices;
-        let minX = verts[0].x;
-        let minY = verts[0].y;
-        for (let i = 1; i < verts.length; i++) {
-          minX = Math.min(minX, verts[i].x);
-          minY = Math.min(minY, verts[i].y);
-        }
-        ctx.drawImage(img, minX * scale, minY * scale, 1 * scale, 1 * scale);
-      } else {
-        ctx.fillStyle = Settings.TEXTURE_COLORS[figure.color as FigureColor] || '#fff';
-        ctx.fill();
+      let minX = verts[0].x;
+      let minY = verts[0].y;
+      for (let i = 1; i < verts.length; i++) {
+        minX = Math.min(minX, verts[i].x);
+        minY = Math.min(minY, verts[i].y);
       }
+      ctx.drawImage(tex, minX * scale, minY * scale, 1 * scale, 1 * scale);
     }
 
     // Coin - draw once per figure at the center of the body
-    if (figure.hasCoin) {
-      ctx.beginPath();
-      ctx.arc(0, 0, 0.3 * scale, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFD700';
-      ctx.fill();
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
+    // if (figure.hasCoin) {
+    //   ctx.beginPath();
+    //   ctx.arc(0, 0, 0.3 * scale, 0, Math.PI * 2);
+    //   ctx.fillStyle = '#FFD700';
+    //   ctx.fill();
+    //   ctx.strokeStyle = '#000';
+    //   ctx.lineWidth = 1;
+    //   ctx.stroke();
+    // }
     
     ctx.restore();
   }

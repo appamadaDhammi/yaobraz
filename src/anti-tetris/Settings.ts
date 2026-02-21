@@ -32,26 +32,38 @@ export const FIGURE_COLORS = [
   'yellow-blue',
 ] as const;
 
-/** Маппинг ключей на пути к текстурам */
-export const TEXTURE_MAP: Record<(typeof FIGURE_COLORS)[number], string> = {
-  'blue': '/src/anti-tetris/assets/block/block__blue.png',
-  'orange': '/src/anti-tetris/assets/block/block__orange.png',
-  'red': '/src/anti-tetris/assets/block/block__red.png',
-  'yellow': '/src/anti-tetris/assets/block/block__yellow.png',
-  'red-yellow': '/src/anti-tetris/assets/block/block__red-yellow.png',
-  'yellow-blue': '/src/anti-tetris/assets/block/block__yellow-blue.png',
+/** Базовые цвета палитры */
+export const COLOR_PALETTE: Record<string, string> = {
+  'blue':   '#9487DF',
+  'yellow': '#F4EB8C',
+  'orange': '#F6C578',
+  'red':    '#EC775E',
+};
+
+/** Раскладка квадрантов для смешанных цветов (2×2) */
+export const MIXED_COLOR_MAP: Record<string, { topLeft: string; topRight: string; bottomLeft: string; bottomRight: string }> = {
+  'red-yellow':  { topLeft: '#EC775E', topRight: '#F4EB8C', bottomLeft: '#F4EB8C', bottomRight: '#EC775E' },
+  'yellow-blue': { topLeft: '#F4EB8C', topRight: '#9487DF', bottomLeft: '#9487DF', bottomRight: '#F4EB8C' },
 };
 
 /** Гекс-цвета для UI (соответствующие текстурам) */
 export const TEXTURE_COLORS: Record<(typeof FIGURE_COLORS)[number] | 'white', string> = {
-  'blue': '#00B4FF',
-  'orange': '#FF9600',
-  'red': '#FF4B4B',
-  'yellow': '#FFD200',
-  'red-yellow': '#FF7800', // смесь
-  'yellow-blue': '#00D2FF', // смесь
-  'white': '#FFFFFF',
+  'blue':    '#9487DF',
+  'orange':  '#F6C578',
+  'red':     '#EC775E',
+  'yellow':  '#F4EB8C',
+  'red-yellow':  '#F0A16E',
+  'yellow-blue': '#C4B9DE',
+  'white':   '#FFFFFF',
 };
+/** Угол падения света для теней блоков (в радианах, 0 = вправо, PI/2 = вниз) */
+export const SHADOW_LIGHT_ANGLE = -Math.PI / 8 * 5;
+
+/** Коэффициент осветления для освещенных граней (0-1) */
+export const SHADOW_LIGHTEN_FACTOR = 0.45;
+
+/** Коэффициент затемнения для теневых граней (0-1) */
+export const SHADOW_DARKEN_FACTOR = 0.20;
 
 /** Типы фигур */
 export const FIGURE_SHAPES = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'] as const;
