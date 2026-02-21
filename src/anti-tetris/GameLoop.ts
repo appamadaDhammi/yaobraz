@@ -271,7 +271,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
         const baseForce = Settings.MOUSE_JOINT_MAX_FORCE;
         const dampedForce = Math.max(
           Settings.MIN_MOUSE_JOINT_FORCE,
-          baseForce - pressure * Settings.RUBBLE_DAMPING_FACTOR
+          baseForce * Math.exp(-pressure * Settings.RUBBLE_DAMPING_FACTOR)
         );
         this.mouseJoint.setMaxForce(dampedForce);
       }

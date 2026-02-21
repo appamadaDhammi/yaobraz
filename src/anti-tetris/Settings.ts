@@ -45,11 +45,11 @@ export const MOUSE_JOINT_FREQUENCY = 15;
 /** Коэффициент демпфирования MouseJoint (0-1) */
 export const MOUSE_JOINT_DAMPING = 0.9;
 
-/** На сколько уменьшается сила за единицу давления (веса сверху) */
-export const RUBBLE_DAMPING_FACTOR = 300;
+/** Коэффициент экспоненциального затухания силы от давления (веса сверху) */
+export const RUBBLE_DAMPING_FACTOR = 0.6;
 
 /** Минимальная сила MouseJoint, чтобы фигура не застревала совсем */
-export const MIN_MOUSE_JOINT_FORCE = 10;
+export const MIN_MOUSE_JOINT_FORCE = 50;
 
 /** Коэффициент сглаживания давления (0-1, меньше = медленнее изменения) */
 export const PRESSURE_SMOOTHING_ALPHA = 0.1;
