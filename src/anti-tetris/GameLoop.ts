@@ -1,4 +1,4 @@
-import { Vec2, Edge, MouseJoint, type MouseJointDef } from 'planck';
+import { Vec2, Box, MouseJoint, type MouseJointDef } from 'planck';
 import { PhysicsWorld } from '../core/PhysicsWorld';
 import { Figure } from './Figure';
 import * as Settings from './Settings';
@@ -99,12 +99,12 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private setupWalls() {
     this.ground = this.world.createBody();
     this.ground.setUserData('wall');
-    // Bottom
-    this.ground.createFixture(new Edge(new Vec2(0, 0), new Vec2(this.width, 0)), 0);
+    // Bottom (ULTRA thick box prevents tunneling even under extreme pressure)
+    this.ground.createFixture(new Box(this.width / 2, 25, new Vec2(this.width / 2, -25)), 0);
     // Left
-    this.ground.createFixture(new Edge(new Vec2(0, 0), new Vec2(0, this.height * 2)), 0);
+    this.ground.createFixture(new Box(10, this.height, new Vec2(-10, this.height)), 0);
     // Right
-    this.ground.createFixture(new Edge(new Vec2(this.width, 0), new Vec2(this.width, this.height * 2)), 0);
+    this.ground.createFixture(new Box(10, this.height, new Vec2(this.width + 10, this.height)), 0);
   }
 
   private spawnInitialFigures() {
@@ -200,6 +200,21 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
     }
 
+    // Update mouse joint force based on rubble pressure
+    if (this.mouseJoint) {
+      const figureBody = this.mouseJoint.getBodyB();
+      const figure = figureBody.getUserData() as Figure;
+      if (figure && typeof figure.getPressure === 'function') {
+        const pressure = figure.getPressure();
+        const baseForce = Settings.MOUSE_JOINT_MAX_FORCE;
+        const dampedForce = Math.max(
+          Settings.MIN_MOUSE_JOINT_FORCE,
+          baseForce - pressure * Settings.RUBBLE_DAMPING_FACTOR
+        );
+        this.mouseJoint.setMaxForce(dampedForce);
+      }
+    }
+
     // Refill check
     if (this.figures.length <= Settings.MIN_FIGURES_TO_REFILL) {
       this.refill();
@@ -240,7 +255,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
         this.mouseJoint = null;
       }
 
-      const pos = new Vec2(input.x, input.y);
+      const pos = new Vec2(
+        Math.max(1, Math.min(this.width - 1, input.x)),
+        Math.max(2, input.y) // Increase to 2.0 to safely clear floor for most shapes
+      );
       // Iterate backwards to find the one "on top"
       let hitFigure: Figure | null = null;
       for (let i = this.figures.length - 1; i >= 0; i--) {
@@ -275,7 +293,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
 
     if (input.isPressed && this.mouseJoint) {
-      this.mouseJoint.setTarget(new Vec2(input.x, input.y));
+      this.mouseJoint.setTarget(new Vec2(
+        Math.max(1, Math.min(this.width - 1, input.x)),
+        Math.max(2, input.y)
+      ));
     }
 
     if (input.justReleased || !input.isPressed) {

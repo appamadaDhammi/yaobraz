@@ -23,7 +23,7 @@ export abstract class PhysicsWorld {
     // Fixed time step update
     this.accumulator += deltaTime;
     while (this.accumulator >= this.timeStep) {
-      this.world.step(this.timeStep, 8, 3);
+      this.world.step(this.timeStep, 10, 10);
       this.accumulator -= this.timeStep;
     }
     

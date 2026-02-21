@@ -45,6 +45,12 @@ export const MOUSE_JOINT_FREQUENCY = 5;
 /** Коэффициент демпфирования MouseJoint (0-1) */
 export const MOUSE_JOINT_DAMPING = 0.7;
 
+/** На сколько уменьшается сила за единицу давления (веса сверху) */
+export const RUBBLE_DAMPING_FACTOR = 1000;
+
+/** Минимальная сила MouseJoint, чтобы фигура не застревала совсем */
+export const MIN_MOUSE_JOINT_FORCE = 10;
+
 /** Сила захвата фигуры (impulse magnitude) - LEGACY */
 export const LEGACY_GRAB_FORCE = 60;
 

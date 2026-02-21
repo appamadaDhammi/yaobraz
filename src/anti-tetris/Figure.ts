@@ -29,6 +29,7 @@ export class Figure {
       allowSleep: true,
       linearDamping: Settings.FIGURE_LINEAR_DAMPING,
       angularDamping: Settings.FIGURE_ANGULAR_DAMPING,
+      bullet: true,
     };
 
     this.body = world.createBody(bodyDef);
@@ -58,5 +59,27 @@ export class Figure {
 
   public destroy(world: World) {
     world.destroyBody(this.body);
+  }
+
+  public getPressure(): number {
+    let pressure = 0;
+    const pos = this.body.getPosition();
+    
+    for (let ce = this.body.getContactList(); ce; ce = ce.next) {
+      const contact = ce.contact;
+      if (!contact.isTouching()) continue;
+
+      const other = ce.other;
+      const otherData = other.getUserData();
+      
+      if (otherData instanceof Figure) {
+        const otherPos = other.getPosition();
+        // If the other figure's center is above this one
+        if (otherPos.y > pos.y + 0.5) { // 0.5 is half a block height buffer
+          pressure += other.getMass();
+        }
+      }
+    }
+    return pressure;
   }
 }
