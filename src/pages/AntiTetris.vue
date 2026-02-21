@@ -4,6 +4,8 @@
       <section class="HeaderSection">
         <AntiTetrisHeader 
           :timer="gameState.timer" 
+          :score="gameState.score"
+          :level="gameState.level"
           :targetShape="gameState.targetShape" 
           :targetColor="gameState.targetColor" 
         />
@@ -33,7 +35,7 @@ import AntiTetrisHeader from '../anti-tetris/components/AntiTetrisHeader.vue';
 import AntiTetrisField from '../anti-tetris/components/AntiTetrisField.vue';
 import AntiTetrisFooter from '../anti-tetris/components/AntiTetrisFooter.vue';
 import GameOverOverlay from '../anti-tetris/components/GameOverOverlay.vue';
-import { GameState } from '../anti-tetris/GameLoop';
+import type { GameState } from '../anti-tetris/GameLoop';
 
 const gameState = reactive<GameState>({
   score: 0,
@@ -58,19 +60,34 @@ const restartGame = () => {
 .AntiTetris {
   width: 100vw;
   height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #111; /* Dark background outside the game box */
   overflow: hidden;
-  background-color: #000;
 }
 
 .GameLayout {
   display: grid;
-  grid-template-rows: 12.5vh 75vh 12.5vh;
+  grid-template-rows: 9.5% 84% 6.5%;
   width: 100%;
   height: 100%;
+  max-width: calc(100vh * 9 / 16);
+  max-height: calc(100vw * 16 / 9);
+  aspect-ratio: 9 / 16;
+  background-color: #000;
+  box-shadow: 0 0 100px rgba(0, 0, 0, 0.5);
+  position: relative;
+  
+  /* Relative font unit base: 1% of container width approx */
+  /* We use container queries for true relative fonts if available, 
+     but we can also use a variable here or just cqw */
+  container-type: size;
 }
 
 .HeaderSection {
   grid-row: 1;
+  z-index: 10;
 }
 
 .FieldSection {
