@@ -61,7 +61,23 @@ export class Figure {
     world.destroyBody(this.body);
   }
 
+  private smoothedPressure: number = 0;
+
+  // Initialize smoothing with instant value to avoid initial lag
+  public initPressureSmoothing() {
+    this.smoothedPressure = this.calculateInstantPressure();
+  }
+
+  public updatePressureSmoothing() {
+    const instant = this.calculateInstantPressure();
+    this.smoothedPressure += (instant - this.smoothedPressure) * Settings.PRESSURE_SMOOTHING_ALPHA;
+  }
+
   public getPressure(): number {
+    return this.smoothedPressure;
+  }
+
+  public calculateInstantPressure(): number {
     let pressure = 0;
     const pos = this.body.getPosition();
     

@@ -204,7 +204,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
     if (this.mouseJoint) {
       const figureBody = this.mouseJoint.getBodyB();
       const figure = figureBody.getUserData() as Figure;
-      if (figure && typeof figure.getPressure === 'function') {
+      if (figure && typeof figure.updatePressureSmoothing === 'function') {
+        figure.updatePressureSmoothing();
         const pressure = figure.getPressure();
         const baseForce = Settings.MOUSE_JOINT_MAX_FORCE;
         const dampedForce = Math.max(
@@ -279,6 +280,9 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
 
       if (hitFigure) {
+        if (typeof hitFigure.initPressureSmoothing === 'function') {
+          hitFigure.initPressureSmoothing();
+        }
         const def: MouseJointDef = {
           maxForce: Settings.MOUSE_JOINT_MAX_FORCE,
           frequencyHz: Settings.MOUSE_JOINT_FREQUENCY,
