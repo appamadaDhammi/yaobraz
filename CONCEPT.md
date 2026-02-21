@@ -10,7 +10,7 @@
 | Игра | Путь | Концепт |
 |---|---|---|
 | **Anti-Tetris** | `/anti-tetris` | [CONCEPT.md](./src/anti-tetris/CONCEPT.md) |
-| **Binary Maze** | `/binary-maze` | _TBD_ |
+| **Binary Maze** | `/binary-maze` | [CONCEPT.md](./src/binary-maze/CONCEPT.md) |
 
 ---
 
