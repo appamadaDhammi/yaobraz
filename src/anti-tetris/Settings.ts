@@ -1,5 +1,5 @@
 /** Длительность раунда в секундах */
-export const GAME_DURATION = 600;
+export const GAME_DURATION = 60;
 
 /** Множитель скорости игры (влияет на всё) */
 export const GAME_SPEED = 1.0;
@@ -20,7 +20,7 @@ export const LEVEL_COLOR_START = 4;
 export const LEVEL_WHITE_BLOCK_START = 8;
 
 /** Бонус времени за монету (секунды) */
-export const COIN_TIME_BONUS = 10;
+export const COIN_TIME_BONUS = 0;
 
 /** Доп. шанс появления 2-й монеты в наборе */
 export const COIN_SECOND_BONUS_CHANCE = 0.1;
