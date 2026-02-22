@@ -130,3 +130,6 @@ export const FIGURE_DRAG_LOSS_DISTANCE = 4.0;
 
 /** Максимальная линейная скорость фигуры (предотвращает туннелирование) */
 export const MAX_FIGURE_VELOCITY = 20;
+
+/** Отступ выше видимого поля, при превышении которого фигура считается выброшенной (в игровых единицах) */
+export const FIGURE_THROW_CEILING_OFFSET = 2.0;
