@@ -73,6 +73,10 @@ const restartGame = () => {
   max-height: calc(100vw * 16 / 9);
   aspect-ratio: 9 / 16;
   background-color: #000;
+  background-image: url('../anti-tetris/assets/game-background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: 0 0 100px rgba(0, 0, 0, 0.5);
   position: relative;
   

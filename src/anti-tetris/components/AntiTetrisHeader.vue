@@ -3,17 +3,17 @@
     <div class="HeaderContent">
 
       <div class="Stat Stat--level">
-        <label class="Stat__label">уровень :</label>
+        <label class="Stat__label">уровень:</label>
         <span class="Stat__value">{{ level }}</span>
       </div>
 
       <div class="Stat Stat--time">
-        <label class="Stat__label">время :</label>
+        <label class="Stat__label">время:</label>
         <span class="Stat__value">{{ formatTime(timer) }}</span>
       </div>
 
       <div class="Stat Stat--next">
-        <label class="Stat__label">фигура :</label>
+        <label class="Stat__label">фигура:</label>
         <div class="TargetBox">
           <div 
             class="TargetBox__figure" 
@@ -57,7 +57,7 @@ const formatTime = (seconds: number) => {
 
 const progressWidth = computed(() => {
   const elapsed = Settings.GAME_DURATION - props.timer;
-  return Math.min(100, Math.max(0, (elapsed / Settings.GAME_DURATION) * 100));
+  return 100 - Math.min(100, Math.max(0, (elapsed / Settings.GAME_DURATION) * 100));
 });
 
 const getFigureIcon = (shape: FigureShape) => {
@@ -80,12 +80,13 @@ const getFigureIcon = (shape: FigureShape) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #000;
+  background: transparent;
 }
 
 .HeaderContent {
   flex: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: stretch;
   justify-content: space-between;
   padding: 0.6cqw 4.5%;
@@ -95,7 +96,8 @@ const getFigureIcon = (shape: FigureShape) => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.2cqw;
+  gap: 12px;
+  padding-bottom: 16px;
 }
 
 .Stat__label {
@@ -124,13 +126,13 @@ const getFigureIcon = (shape: FigureShape) => {
 
 .Stat--time {
   flex: 1;
-  align-items: flex-start;
+  align-items: center;
   padding-left: 4%;
 }
 
 .Stat--next {
   flex: 0 0 auto;
-  align-items: flex-start;
+  align-items: flex-end;
 }
 
 .TargetBox {

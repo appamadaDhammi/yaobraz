@@ -154,7 +154,7 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
   height: 100%;
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: transparent;
 }
 
 canvas {

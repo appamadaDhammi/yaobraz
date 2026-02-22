@@ -2,7 +2,7 @@
   <footer class="GameFooter">
     <div class="FooterDivider"></div>
     <div class="FooterContent">
-      <span class="FooterText">ANTI-TETRIS DESIGN SYNC 2026</span>
+      <span class="FooterText">Яндекс  Образование 2026</span>
     </div>
   </footer>
 </template>
@@ -11,7 +11,7 @@
 .GameFooter {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: transparent;
   display: flex;
   flex-direction: column;
 }
@@ -31,11 +31,7 @@
 
 .FooterText {
   color: #F2EB98;
-  opacity: 0.3;
   font-family: 'Monocraft', monospace;
   font-size: 3cqw;
-  font-weight: 700;
-  letter-spacing: 0.5em;
-  text-transform: uppercase;
 }
 </style>
