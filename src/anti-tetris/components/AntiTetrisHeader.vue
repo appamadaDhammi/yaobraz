@@ -1,14 +1,15 @@
 <template>
   <header class="GameHeader">
     <div class="HeaderContent">
-      <div class="Stat Stat--score">
-        <label class="Stat__label">SCORE</label>
-        <span class="Stat__value">{{ score.toString().padStart(4, '0') }}</span>
-      </div>
 
       <div class="Stat Stat--time">
         <label class="Stat__label">TIME</label>
         <span class="Stat__value">{{ formatTime(timer) }}</span>
+      </div>
+
+      <div class="Stat Stat--level">
+        <label class="Stat__label">LVL</label>
+        <span class="Stat__value">{{ level }}</span>
       </div>
 
       <div class="Stat Stat--next">
@@ -38,7 +39,6 @@ import * as Settings from '../Settings';
 
 const props = defineProps<{
   timer: number;
-  score: number;
   level: number;
   targetShape: FigureShape;
   targetColor: FigureColor | 'white';
@@ -52,7 +52,7 @@ const formatTime = (seconds: number) => {
 };
 
 const progressWidth = computed(() => {
-  // Simple progress based on level/score or fixed for now as per SVG
+  // Simple progress based on level or fixed for now as per SVG
   return 27.4; // Matches the ~296px width in 1080px SVG
 });
 
