@@ -62,13 +62,13 @@ const progressWidth = computed(() => {
 
 const getFigureIcon = (shape: FigureShape) => {
   const icons: Record<FigureShape, string> = {
-    I: '<svg viewBox="0 0 10 40"><rect width="10" height="40" fill="currentColor"/></svg>',
+    I: '<svg viewBox="0 0 40 10"><rect width="40" height="10" fill="currentColor"/></svg>',
     O: '<svg viewBox="0 0 20 20"><rect width="20" height="20" fill="currentColor"/></svg>',
     T: '<svg viewBox="0 0 30 20"><path d="M0,0 h30 v10 h-10 v10 h-10 v-10 h-10 z" fill="currentColor"/></svg>',
     S: '<svg viewBox="0 0 30 20"><path d="M10,0 h20 v10 h-10 v10 h-20 v-10 h10 z" fill="currentColor"/></svg>',
     Z: '<svg viewBox="0 0 30 20"><path d="M0,0 h20 v10 h10 v10 h-20 v-10 h-10 z" fill="currentColor"/></svg>',
-    L: '<svg viewBox="0 0 20 30"><path d="M0,0 h10 v20 h10 v10 h-20 z" fill="currentColor"/></svg>',
-    J: '<svg viewBox="0 0 20 30"><path d="M0,20 h10 v-20 h10 v30 h-20 z" fill="currentColor"/></svg>',
+    L: '<svg viewBox="0 0 30 20"><path d="M0,10 h20 v-10 h10 v20 h-30 z" fill="currentColor"/></svg>',
+    J: '<svg viewBox="0 0 30 20"><path d="M0,0 h10 v10 h20 v10 h-30 z" fill="currentColor"/></svg>',
   };
   return icons[shape];
 };
@@ -81,6 +81,7 @@ const getFigureIcon = (shape: FigureShape) => {
   display: flex;
   flex-direction: column;
   background: transparent;
+  padding-right: 12px;
 }
 
 .HeaderContent {
@@ -136,17 +137,21 @@ const getFigureIcon = (shape: FigureShape) => {
 }
 
 .TargetBox {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .TargetBox__figure {
-  width: 5.5cqw;
-  height: 5.5cqw;
+  width: 10cqw;
+  height: 10cqw;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  right: 0;
+  top: 16px;
 }
 
 .TargetBox__figure :deep(svg) {
