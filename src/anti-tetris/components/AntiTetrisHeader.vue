@@ -145,7 +145,7 @@ const getFigureIcon = (shape: FigureShape) => {
 
 .TargetBox__figure {
   width: 10cqw;
-  height: 10cqw;
+  height: 5cqw;
   display: flex;
   align-items: center;
   justify-content: center;

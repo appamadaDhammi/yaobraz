@@ -102,7 +102,7 @@ export const DRAG_ZONE_RATIO = 1 / 8;
 export const HINT_TEXT = 'кидай вверх';
 
 /** Текст на стартовом экране */
-export const START_TEXT = 'КОСНИСЬ ЧТОБЫ НАЧАТЬ ИГРУ';
+export const START_TEXT = 'НАЧАТЬ ИГРУ';
 
 /** Текст туториала */
 export const TUTORIAL_TEXT = 'КИДАЙ ВВЕРХ';

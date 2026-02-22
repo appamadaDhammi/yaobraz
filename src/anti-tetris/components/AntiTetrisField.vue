@@ -12,7 +12,6 @@
       <div class="Hint__arrow">↑</div>
       <div class="Hint__text">
         <span>{{ Settings.TUTORIAL_TEXT }}</span>
-        <span>{{ Settings.TUTORIAL_TEXT }}</span>
       </div>
       <div class="Hint__arrow">↑</div>
     </div>
@@ -163,7 +162,7 @@ canvas {
 
 .Hint {
   position: absolute;
-  top: 15%;
+  top: 5%;
   left: 0;
   right: 0;
   display: flex;
@@ -181,7 +180,7 @@ canvas {
 }
 
 .Hint__arrow {
-  font-size: 2.5rem;
+  font-size: 6.5rem;
   animation: bounce 1.5s infinite ease-in-out;
 }
 
