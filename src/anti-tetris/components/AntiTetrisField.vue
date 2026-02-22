@@ -206,7 +206,7 @@ canvas {
   align-items: center;
   justify-content: center;
   z-index: 10;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(10px) brightness(.5);
   pointer-events: none;
 }
 
@@ -218,10 +218,10 @@ canvas {
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 2rem;
-  background: rgba(148, 135, 223, 0.2);
+  padding: 4rem;
+  background: rgba(148, 135, 223, 0.5);
   border: 4px solid #9487DF;
-  border-radius: 1rem;
+  border-width: 1px 0 1px 0;
   box-shadow: 0 0 30px rgba(148, 135, 223, 0.3);
   animation: pulse 2s infinite ease-in-out;
 }
