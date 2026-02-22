@@ -97,15 +97,14 @@ describe('AntiTetrisLoop – stepping', () => {
     loop.step(16); // ~1 frame at 60 fps
   });
 
-  it('runs 300 steps (≈5 s at 60 fps) without errors', () => {
+  it('runs 300 steps (≈5 s at 60 fps) without errors (WAITING stage)', () => {
     const fps60 = 1000 / 60;
     for (let i = 0; i < 300; i++) {
       loop.step(i * fps60);
     }
-    // Timer should have decreased
+    // Timer should NOT have decreased in WAITING state
     const state = loop.getState();
-    expect(state.timer).toBeLessThan(Settings.GAME_DURATION);
-    expect(state.timer).toBeGreaterThan(0);
+    expect(state.timer).toBe(Settings.GAME_DURATION);
   });
 
   it('figures stay inside the field after 300 steps', () => {
@@ -211,15 +210,54 @@ describe('AntiTetrisLoop – refill', () => {
 });
 
 
-describe('AntiTetrisLoop – game over', () => {
+describe('AntiTetrisLoop – timer logic', () => {
+  it('does not decrease timer in WAITING state', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    const initialTimer = loop.getState().timer;
+    
+    // Step a few frames
+    const fps60 = 1000 / 60;
+    for (let i = 0; i < 10; i++) loop.step(i * fps60);
+    
+    expect(loop.getState().timer).toBe(initialTimer);
+  });
+
+  it('decreases timer only in PLAYING state', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false, 10);
+    const initialTimer = loop.getState().timer;
+    expect(initialTimer).toBe(10);
+    
+    // Start game
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+    expect(loop.getState().status).toBe('PLAYING');
+    
+    // Step multiple frames to ensure a measurable decrease
+    const fps60 = 1000 / 60;
+    for (let i = 0; i < 10; i++) {
+      loop.step(i * fps60);
+    }
+    
+    expect(loop.getState().timer).toBeLessThan(initialTimer);
+  });
+
   it('enters game-over state when timer expires', () => {
-    const TEST_DURATION = 1; // 1 second
+    // Note: PHYSICS_SPEED in Settings is 1.6, GAME_SPEED is 1.0. 
+    // The timer decreases in onUpdate which is called every loop.step if enough time passed.
+    // However, the decrement is based on (1/60) * GAME_SPEED and it assumes 60fps.
+    // Actually in step(time):
+    // while (this.accumulator >= this.fixedDeltaTime) { 
+    //   this.world.step(this.fixedDeltaTime);
+    //   this.onUpdate(); ...
+    // So timer decreases by fixed amount every fixedDeltaTime.
+    const TEST_DURATION = 0.1; // very short
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false, TEST_DURATION);
+    
+    // Start game
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
 
     // Simulate enough frames to drain the timer
     const fps60 = 1000 / 60;
-    const totalFrames = Math.ceil(TEST_DURATION * 60 / Settings.GAME_SPEED) + 10;
-    for (let i = 0; i < totalFrames; i++) {
+    for (let i = 0; i < 20; i++) {
       loop.step(i * fps60);
     }
 

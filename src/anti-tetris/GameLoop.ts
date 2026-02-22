@@ -284,10 +284,12 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.checkAndSpawnNext();
 
     // Update timer
-    this.state.timer -= (1 / 60) * Settings.GAME_SPEED; // Assuming 60fps, scale with GAME_SPEED
-    if (this.state.timer <= 0) {
-      this.state.timer = 0;
-      this.state.isGameOver = true;
+    if (this.state.status === 'PLAYING') {
+      this.state.timer -= (1 / 60) * Settings.GAME_SPEED; // Assuming 60fps, scale with GAME_SPEED
+      if (this.state.timer <= 0) {
+        this.state.timer = 0;
+        this.state.isGameOver = true;
+      }
     }
 
     // Check figures out of bounds (thrown upwards)
