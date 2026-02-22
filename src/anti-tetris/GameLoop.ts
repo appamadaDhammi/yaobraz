@@ -205,17 +205,15 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
   }
 
-  private spawnFigure(customX?: number, customY?: number): Figure {
+  private spawnFigure(customX?: number, customY?: number, hasWhiteBlock: boolean = false): Figure {
     const shape = Settings.FIGURE_SHAPES[Math.floor(Math.random() * Settings.FIGURE_SHAPES.length)];
     const color = Settings.FIGURE_COLORS[Math.floor(Math.random() * Settings.FIGURE_COLORS.length)];
     const x = customX !== undefined ? customX : Math.random() * (this.width - 4) + 2;
-    const y = customY !== undefined ? customY : this.height + Math.random() * 5; // Spawn above the field or in the container
+    const y = customY !== undefined ? customY : this.height + Math.random() * 5;
     
-    // Coin chance
-    // const coinChance = this.state.level === 1 ? 1 : 1 / this.state.level;
     const hasCoin = Math.random() < .5;
 
-    const figure = new Figure(this.world, shape!, color!, x, y, hasCoin);
+    const figure = new Figure(this.world, shape!, color!, x, y, hasCoin, hasWhiteBlock);
     this.figures.push(figure);
     return figure;
   }
@@ -227,7 +225,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     if (randomFigure) {
       this.state.targetShape = randomFigure.shape;
       
-      if (this.state.level === 1) {
+      if (this.state.level < Settings.LEVEL_COLOR_START) {
         this.state.targetColor = 'white';
       } else {
         this.state.targetColor = randomFigure.color;
@@ -339,6 +337,14 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
     }
 
+    // White block gravity: double gravity while any white-block figure is on the field
+    const hasWhiteBlockFigure = this.figures.some(f => f.hasWhiteBlock);
+    const currentGravity = this.world.getGravity().y;
+    const targetGravity = hasWhiteBlockFigure ? Settings.HEAVY_GRAVITY : Settings.DEFAULT_GRAVITY;
+    if (currentGravity !== targetGravity && this.state.status === 'PLAYING') {
+      this.world.setGravity(new Vec2(0, targetGravity));
+    }
+
     // Refill check
     if (this.figures.length <= Settings.MIN_FIGURES_TO_REFILL) {
       this.refill();
@@ -369,8 +375,13 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   private refill() {
     this.state.level++;
+    
+    // On levels >= LEVEL_WHITE_BLOCK_START, one random figure in the batch gets a white block
+    const addWhiteBlock = this.state.level >= Settings.LEVEL_WHITE_BLOCK_START;
+    const whiteBlockBatchIndex = addWhiteBlock ? Math.floor(Math.random() * Settings.FIGURES_PER_REFILL) : -1;
+
     for (let i = 0; i < Settings.FIGURES_PER_REFILL; i++) {
-      this.spawnFigure();
+      this.spawnFigure(undefined, undefined, i === whiteBlockBatchIndex);
     }
     this.updateTarget();
   }

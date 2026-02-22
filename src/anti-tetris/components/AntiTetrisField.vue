@@ -100,14 +100,18 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
     const pos = figure.body.getPosition();
     const angle = figure.body.getAngle();
 
-    // Generate one texture per figure per frame (cached for all its fixtures)
+    // Generate textures: one for figure color, one white texture if needed
     const tex = generateDynamicBlockTexture(figure.color, angle, Math.round(scale));
+    const whiteTex = figure.hasWhiteBlock
+      ? generateDynamicBlockTexture('white', angle, Math.round(scale))
+      : null;
     
     ctx.save();
     ctx.translate(pos.x * scale, pos.y * scale);
     ctx.rotate(angle);
 
     // Draw fixtures
+    let fixtureIndex = 0;
     for (let f = figure.body.getFixtureList(); f; f = f.getNext()) {
       const shape = f.getShape() as any;
       const verts = shape.m_vertices;
@@ -118,19 +122,11 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
         minX = Math.min(minX, verts[i].x);
         minY = Math.min(minY, verts[i].y);
       }
-      ctx.drawImage(tex, minX * scale, minY * scale, 1 * scale, 1 * scale);
-    }
 
-    // Coin - draw once per figure at the center of the body
-    // if (figure.hasCoin) {
-    //   ctx.beginPath();
-    //   ctx.arc(0, 0, 0.3 * scale, 0, Math.PI * 2);
-    //   ctx.fillStyle = '#FFD700';
-    //   ctx.fill();
-    //   ctx.strokeStyle = '#000';
-    //   ctx.lineWidth = 1;
-    //   ctx.stroke();
-    // }
+      const isWhiteBlock = figure.hasWhiteBlock && fixtureIndex === figure.whiteBlockIndex;
+      ctx.drawImage(isWhiteBlock ? whiteTex! : tex, minX * scale, minY * scale, 1 * scale, 1 * scale);
+      fixtureIndex++;
+    }
     
     ctx.restore();
   }

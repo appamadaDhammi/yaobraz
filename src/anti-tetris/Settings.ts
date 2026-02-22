@@ -11,7 +11,13 @@ export const PHYSICS_SPEED = 1.6;
 export const MIN_FIGURES_TO_REFILL = 3;
 
 /** Кол-во новых фигур при пополнении */
-export const FIGURES_PER_REFILL = 6;
+export const FIGURES_PER_REFILL = 4;
+
+/** Уровень, с которого цель начинает учитывать цвет */
+export const LEVEL_COLOR_START = 4;
+
+/** Уровень, с которого появляются фигуры с белым блоком */
+export const LEVEL_WHITE_BLOCK_START = 8;
 
 /** Бонус времени за монету (секунды) */
 export const COIN_TIME_BONUS = 10;
@@ -112,6 +118,9 @@ export const GRAVITY_DELAY_SEC = 2.0;
 
 /** Стандартная сила гравитации */
 export const DEFAULT_GRAVITY = -10;
+
+/** Увеличенная гравитация при наличии фигуры с белым блоком на поле */
+export const HEAVY_GRAVITY = -20;
 
 /** Поверхностное трение фигур */
 export const FIGURE_FRICTION = 0.3;
