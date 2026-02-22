@@ -353,7 +353,7 @@ describe('AntiTetrisLoop – white block: spawning', () => {
    */
   function drainSpawnQueue(loop: AntiTetrisLoop) {
     const fps60 = 1000 / 60;
-    let t = 0;
+    let t = (loop as any).lastTime || 0;
     for (let i = 0; i < 600 && (loop as any).isRefilling; i++) {
       t += fps60;
       loop.step(t);
@@ -365,6 +365,13 @@ describe('AntiTetrisLoop – white block: spawning', () => {
     while (loop.getState().level < targetLevel) {
       (loop as any).refill();
       drainSpawnQueue(loop);
+      // Let's destroy all figures to prevent piling up and deadlocking the spawn pipeline
+      // We keep Settings.MIN_FIGURES_TO_REFILL + 1 to prevent auto-refill triggering
+      const world = loop.getWorld();
+      const figures = loop.getFigures();
+      while (figures.length > Settings.MIN_FIGURES_TO_REFILL + 1) {
+        figures.shift()!.destroy(world);
+      }
     }
   }
 
@@ -420,7 +427,7 @@ describe('AntiTetrisLoop – white block: spawning', () => {
 describe('AntiTetrisLoop – white block: gravity doubling', () => {
   function drainSpawnQueue(loop: AntiTetrisLoop) {
     const fps60 = 1000 / 60;
-    let t = 0;
+    let t = (loop as any).lastTime || 0;
     for (let i = 0; i < 600 && (loop as any).isRefilling; i++) {
       t += fps60;
       loop.step(t);
@@ -431,6 +438,12 @@ describe('AntiTetrisLoop – white block: gravity doubling', () => {
     while (loop.getState().level < targetLevel) {
       (loop as any).refill();
       drainSpawnQueue(loop);
+      // Let's destroy all figures to prevent piling up and deadlocking the spawn pipeline
+      const world = loop.getWorld();
+      const figures = loop.getFigures();
+      while (figures.length > 0) {
+        figures.pop()!.destroy(world);
+      }
     }
   }
 

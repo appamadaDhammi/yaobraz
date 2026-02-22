@@ -23,8 +23,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private isSlowInit: boolean;
   private isInitializing: boolean = false;
   private isRefilling: boolean = false;
-  private isWaitingForHit: boolean = false;
-  private hitDetectedDuringStep: boolean = false;
+  private isWaitingForSpawnZoneClear: boolean = false;
   private spawnsLeft: number = 0;
   private whiteBlockQueue: boolean[] = [];
   private lastSpawnedFigure: Figure | null = null;
@@ -58,45 +57,39 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   private setupContactListener() {
-    this.world.on('begin-contact', (contact) => {
-      if (this.isSequentiallySpawning && this.isWaitingForHit && this.lastSpawnedFigure) {
-        const fixtureA = contact.getFixtureA();
-        const fixtureB = contact.getFixtureB();
-        const bodyA = fixtureA.getBody();
-        const bodyB = fixtureB.getBody();
-        const dataA = bodyA.getUserData();
-        const dataB = bodyB.getUserData();
-
-        // One of the bodies MUST be the last spawned figure
-        const isLastFigureA = bodyA === this.lastSpawnedFigure.body;
-        const isLastFigureB = bodyB === this.lastSpawnedFigure.body;
-
-        if (isLastFigureA || isLastFigureB) {
-          const otherData = isLastFigureA ? dataB : dataA;
-          // The other body MUST be a solid object: another Figure OR a wall
-          if (otherData instanceof Figure || otherData === 'wall') {
-            this.hitDetectedDuringStep = true;
-          }
-        }
-      }
-    });
+    // No contact listener logic needed for spawning anymore
   }
 
   private precomputeInitialization() {
     const timeStep = 1 / 60;
     let safetyCounter = 0;
-    while (this.isInitializing && safetyCounter < 1000) { // precompute for init only
+    
+    // Step until all figures are spawned
+    while (this.isInitializing && safetyCounter < 2000) { // precompute for init only
       this.world.step(timeStep);
       this.checkAndSpawnNext();
       safetyCounter++;
     }
+    
+    // Step extra to let them fall to the ground
+    let extraSteps = 300;
+    while (extraSteps > 0 && safetyCounter < 2000) {
+      this.world.step(timeStep);
+      safetyCounter++;
+      extraSteps--;
+    }
   }
 
   private checkAndSpawnNext() {
-    if (this.hitDetectedDuringStep) {
-      this.hitDetectedDuringStep = false;
-      this.isWaitingForHit = false;
-      this.spawnNextSequential();
+    if (this.isSequentiallySpawning && this.isWaitingForSpawnZoneClear && this.lastSpawnedFigure) {
+      const pos = this.lastSpawnedFigure.body.getPosition();
+      const maxOffset = typeof this.lastSpawnedFigure.getMaxBottomOffset === 'function' ? this.lastSpawnedFigure.getMaxBottomOffset() : 2.0;
+      
+      // Wait until the figure is completely below the top boundary
+      if (pos.y + maxOffset < this.height) {
+        this.isWaitingForSpawnZoneClear = false;
+        this.spawnNextSequential();
+      }
     }
   }
 
@@ -180,7 +173,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private spawnInitialFigures() {
     if (this.state.status === 'WAITING') {
       // Spawn 7 random unique figures in the center (no gravity yet)
-      for (let i = 0; i < 7; i++) {
+      const figuresToSpawn = Settings.FIGURES_PER_REFILL + Settings.MIN_FIGURES_TO_REFILL;
+      for (let i = 0; i < figuresToSpawn; i++) {
         const figure = this.spawnFigure(
           this.width / 2 + (Math.random() - 0.5) * 4,
           this.height / 2 + (Math.random() - 0.5) * 4
@@ -206,8 +200,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
    */
   private spawnNextSequential() {
     if (this.spawnsLeft > 0) {
-      if (!this.isWaitingForHit) {
-        this.isWaitingForHit = true;
+      if (!this.isWaitingForSpawnZoneClear) {
+        this.isWaitingForSpawnZoneClear = true;
         const margin = this.width * 0.2;
         const x = margin + Math.random() * (this.width - margin * 2);
         const y = this.height + 2; // Spawn just above the visible field
