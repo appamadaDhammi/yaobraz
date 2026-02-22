@@ -248,4 +248,147 @@ describe('AntiTetrisLoop – OOB safeguards', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Level progression – target color rules
+// ---------------------------------------------------------------------------
+describe('AntiTetrisLoop – level progression: target color', () => {
+  it('target color is white on level 1 (no color match required)', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    expect(loop.getState().level).toBe(1);
+    expect(loop.getState().targetColor).toBe('white');
+  });
+
+  it('target color is white on levels 2 and 3', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+
+    // Force level 2 by calling refill twice (private method access via cast)
+    (loop as any).refill();
+    expect(loop.getState().level).toBe(2);
+    expect(loop.getState().targetColor).toBe('white');
+
+    (loop as any).refill();
+    expect(loop.getState().level).toBe(3);
+    expect(loop.getState().targetColor).toBe('white');
+  });
+
+  it('target color is a real color from level 4 onwards', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+
+    // Fast-forward to level 4
+    for (let lvl = 1; lvl < Settings.LEVEL_COLOR_START; lvl++) {
+      (loop as any).refill();
+    }
+    expect(loop.getState().level).toBe(Settings.LEVEL_COLOR_START);
+    // targetColor must now be a real figure color, not 'white'
+    expect(Settings.FIGURE_COLORS).toContain(loop.getState().targetColor as any);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// White block mechanic
+// ---------------------------------------------------------------------------
+describe('AntiTetrisLoop – white block: spawning', () => {
+  /** Advance loop to a given level by calling private refill repeatedly */
+  function advanceToLevel(loop: AntiTetrisLoop, targetLevel: number) {
+    while (loop.getState().level < targetLevel) {
+      (loop as any).refill();
+    }
+  }
+
+  it('no white block figures before level 8', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
+
+    const hasAny = loop.getFigures().some(f => f.hasWhiteBlock);
+    expect(hasAny).toBe(false);
+  });
+
+  it('at least one white block figure spawns on refill at level 8', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    // Advance to just before the threshold, then trigger the level-8 refill
+    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
+
+    // This refill call bumps level to LEVEL_WHITE_BLOCK_START and should
+    // include exactly one white block figure
+    (loop as any).refill();
+    expect(loop.getState().level).toBe(Settings.LEVEL_WHITE_BLOCK_START);
+
+    const whiteBlockFigures = loop.getFigures().filter(f => f.hasWhiteBlock);
+    expect(whiteBlockFigures.length).toBe(1);
+  });
+
+  it('white block figure has a valid whiteBlockIndex', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
+    (loop as any).refill();
+
+    const wbFig = loop.getFigures().find(f => f.hasWhiteBlock)!;
+    expect(wbFig).toBeDefined();
+    expect(wbFig.whiteBlockIndex).toBeGreaterThanOrEqual(0);
+
+    // Count fixtures on body (should equal number of blocks in the shape)
+    let fixtureCount = 0;
+    for (let f = wbFig.body.getFixtureList(); f; f = f.getNext()) fixtureCount++;
+    expect(wbFig.whiteBlockIndex).toBeLessThan(fixtureCount);
+  });
+});
+
+describe('AntiTetrisLoop – white block: gravity doubling', () => {
+  function advanceToLevel(loop: AntiTetrisLoop, targetLevel: number) {
+    while (loop.getState().level < targetLevel) {
+      (loop as any).refill();
+    }
+  }
+
+  it('gravity doubles to HEAVY_GRAVITY when a white-block figure is on field', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+
+    // Start the game so gravity is active
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+    expect(loop.getState().status).toBe('PLAYING');
+
+    // Advance to level 8 so a white block is present
+    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
+    (loop as any).refill(); // triggers level 8 refill with white block
+
+    const hasWB = loop.getFigures().some(f => f.hasWhiteBlock);
+    expect(hasWB).toBe(true);
+
+    // Run a couple of steps so onUpdate picks up the white block
+    const fps60 = 1000 / 60;
+    for (let i = 0; i < 5; i++) loop.step(i * fps60);
+
+    expect(loop.getWorld().getGravity().y).toBe(Settings.HEAVY_GRAVITY);
+  });
+
+  it('gravity returns to DEFAULT_GRAVITY when all white-block figures are removed', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
+    (loop as any).refill();
+
+    // Run a step to let onUpdate apply heavy gravity
+    const fps60 = 1000 / 60;
+    for (let i = 0; i < 5; i++) loop.step(i * fps60);
+    expect(loop.getWorld().getGravity().y).toBe(Settings.HEAVY_GRAVITY);
+
+    // Destroy all white-block figures
+    const world = loop.getWorld();
+    const figures = loop.getFigures();
+    for (let i = figures.length - 1; i >= 0; i--) {
+      if (figures[i]!.hasWhiteBlock) {
+        figures[i]!.destroy(world);
+        figures.splice(i, 1);
+      }
+    }
+    expect(loop.getFigures().some(f => f.hasWhiteBlock)).toBe(false);
+
+    // Step again so onUpdate detects no white block and restores gravity
+    const base = 5 * fps60;
+    for (let i = 0; i < 5; i++) loop.step(base + i * fps60);
+
+    expect(loop.getWorld().getGravity().y).toBe(Settings.DEFAULT_GRAVITY);
+  });
+});
 
