@@ -2,18 +2,18 @@
   <header class="GameHeader">
     <div class="HeaderContent">
 
-      <div class="Stat Stat--time">
-        <label class="Stat__label">TIME</label>
-        <span class="Stat__value">{{ formatTime(timer) }}</span>
-      </div>
-
       <div class="Stat Stat--level">
-        <label class="Stat__label">LVL</label>
+        <label class="Stat__label">уровень :</label>
         <span class="Stat__value">{{ level }}</span>
       </div>
 
+      <div class="Stat Stat--time">
+        <label class="Stat__label">время :</label>
+        <span class="Stat__value">{{ formatTime(timer) }}</span>
+      </div>
+
       <div class="Stat Stat--next">
-        <label class="Stat__label">NEXT</label>
+        <label class="Stat__label">фигура :</label>
         <div class="TargetBox">
           <div 
             class="TargetBox__figure" 
@@ -26,8 +26,9 @@
       </div>
     </div>
     
-    <div class="HeaderDivider">
-      <div class="HeaderDivider__progress" :style="{ width: progressWidth + '%' }"></div>
+    <div class="HeaderTimeline">
+      <div class="HeaderTimeline__bg"></div>
+      <div class="HeaderTimeline__value" :style="{ width: progressWidth + '%' }"></div>
     </div>
   </header>
 </template>
@@ -36,6 +37,9 @@
 import { computed } from 'vue';
 import type { FigureShape, FigureColor } from '../Settings';
 import * as Settings from '../Settings';
+
+import timelineBg from '../assets/timeline-bg.png';
+import timelineValue from '../assets/timeline-value.png';
 
 const props = defineProps<{
   timer: number;
@@ -46,14 +50,14 @@ const props = defineProps<{
 
 const formatTime = (seconds: number) => {
   const s = Math.ceil(seconds);
-  const mins = Math.floor(s / 60);
-  const secs = s % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const mins = String(Math.floor(s / 60)).padStart(2, '0');
+  const secs = String(s % 60).padStart(2, '0');
+  return `${mins}:${secs}`;
 };
 
 const progressWidth = computed(() => {
-  // Simple progress based on level or fixed for now as per SVG
-  return 27.4; // Matches the ~296px width in 1080px SVG
+  const elapsed = Settings.GAME_DURATION - props.timer;
+  return Math.min(100, Math.max(0, (elapsed / Settings.GAME_DURATION) * 100));
 });
 
 const getFigureIcon = (shape: FigureShape) => {
@@ -77,83 +81,101 @@ const getFigureIcon = (shape: FigureShape) => {
   display: flex;
   flex-direction: column;
   background: #000;
-  padding-top: 2rem;
 }
 
 .HeaderContent {
   flex: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   justify-content: space-between;
-  padding: 0 4.5%;
-  margin-bottom: 2rem;
+  padding: 0.6cqw 4.5%;
 }
 
 .Stat {
   display: flex;
-  align-items: flex-end;
-  gap: 1.5rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2cqw;
 }
 
 .Stat__label {
   color: #C2B9FA;
-  opacity: 0.5;
-  font-family: 'Inter', sans-serif;
-  font-size: 3.5cqw;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.2rem;
+  font-family: 'Monocraft', monospace;
+  font-size: 2.8cqw;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  line-height: 1;
 }
 
 .Stat__value {
-  color: #F2EB98;
-  font-family: 'Inter', sans-serif;
+  color: #F6C578;
+  font-family: 'Monocraft', monospace;
   font-size: 5.5cqw;
-  font-weight: 800;
+  font-weight: 400;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
+.Stat--level {
+  flex: 0 0 auto;
+  min-width: 18%;
+  align-items: flex-start;
+}
+
+.Stat--time {
+  flex: 1;
+  align-items: flex-start;
+  padding-left: 4%;
+}
+
 .Stat--next {
-  gap: 1.5rem;
+  flex: 0 0 auto;
+  align-items: flex-start;
 }
 
 .TargetBox {
-  width: 120px;
-  height: 40px;
-  background-color: #F6C578;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
 .TargetBox__figure {
-  width: 30px;
-  height: 30px;
+  width: 5.5cqw;
+  height: 5.5cqw;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .TargetBox__figure :deep(svg) {
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
-.HeaderDivider {
-  height: 30px;
+.HeaderTimeline {
+  height: 3.5cqw;
   width: 100%;
-  background-color: #9487DF;
   position: relative;
-  box-shadow: inset 10px 10px 0 rgba(255,255,255,0.5), inset -10px -10px 0 rgba(0,0,0,0.25);
+  flex-shrink: 0;
 }
 
-.HeaderDivider__progress {
-  height: 40px;
-  background-color: #F4EB8C;
+.HeaderTimeline__bg {
   position: absolute;
-  top: -5px;
+  inset: 0;
+  background-image: v-bind("`url('${timelineBg}')`");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.HeaderTimeline__value {
+  position: absolute;
+  top: 0;
   left: 0;
+  bottom: 0;
+  background-image: v-bind("`url('${timelineValue}')`");
+  background-size: cover;
+  background-position: left center;
+  background-repeat: no-repeat;
+  z-index: 1;
 }
 </style>

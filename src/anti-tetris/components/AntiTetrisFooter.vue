@@ -32,7 +32,7 @@
 .FooterText {
   color: #F2EB98;
   opacity: 0.3;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Monocraft', monospace;
   font-size: 3cqw;
   font-weight: 700;
   letter-spacing: 0.5em;

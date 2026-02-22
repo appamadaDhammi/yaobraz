@@ -35,6 +35,7 @@ defineEmits(['restart']);
   justify-content: center;
   z-index: 100;
   color: #fff;
+  font-family: 'Monocraft', monospace;
 }
 
 .GameOver__content {

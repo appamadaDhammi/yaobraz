@@ -173,7 +173,7 @@ canvas {
   pointer-events: none;
   color: #9487DF;
   opacity: 0.8;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Monocraft', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.2em;
@@ -212,7 +212,7 @@ canvas {
 
 .StartOverlay__content {
   color: #fff;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Monocraft', monospace;
   font-weight: 800;
   font-size: 6cqw;
   text-align: center;
