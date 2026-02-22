@@ -180,6 +180,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
           this.width / 2 + Math.cos(angle) * Settings.SPAWN_RADIUS,
           this.height / 2 + Math.sin(angle) * Settings.SPAWN_RADIUS
         );
+        figure.body.setAngle(Math.random() * Math.PI * 2);
         // Random initial velocity for "free flow"
         figure.body.setLinearVelocity(new Vec2((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5));
         figure.body.setAngularVelocity((Math.random() - 0.5) * 2);
