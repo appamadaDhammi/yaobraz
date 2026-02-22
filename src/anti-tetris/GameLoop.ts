@@ -276,8 +276,9 @@ export class AntiTetrisLoop extends PhysicsWorld {
         if (figure?.body) {
           const pos = figure.body.getPosition();
           
-          // If figure is above the container (with offset to avoid suction at the visible boundary)
-          if (pos.y > this.height + Settings.FIGURE_THROW_CEILING_OFFSET) {
+          // If figure is above the container AND moving upward (actually thrown, not just spawning)
+          const vel = figure.body.getLinearVelocity();
+          if (pos.y > this.height + Settings.FIGURE_THROW_CEILING_OFFSET && vel.y > 0) {
             this.handleFigureThrown(figure, i);
             continue; // Figure destroyed, skip further checks
           }
