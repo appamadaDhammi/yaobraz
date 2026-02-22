@@ -22,12 +22,14 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private ground: any;
   private isSlowInit: boolean;
   private isInitializing: boolean = false;
+  private isRefilling: boolean = false;
   private isWaitingForHit: boolean = false;
   private hitDetectedDuringStep: boolean = false;
-  private initialSpawnsLeft: number = 0;
+  private spawnsLeft: number = 0;
+  private whiteBlockQueue: boolean[] = [];
   private lastSpawnedFigure: Figure | null = null;
 
-  constructor(width: number, height: number, isSlowInit: boolean = false) {
+  constructor(width: number, height: number, isSlowInit: boolean = false, initialTimer?: number) {
     super(new Vec2(0, Settings.DEFAULT_GRAVITY));
     this.width = width;
     this.height = height;
@@ -36,7 +38,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     
     this.state = {
       level: 1,
-      timer: Settings.GAME_DURATION,
+      timer: initialTimer !== undefined ? initialTimer : Settings.GAME_DURATION,
       targetShape: 'I',
       targetColor: 'white',
       isGameOver: false,
@@ -57,7 +59,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   private setupContactListener() {
     this.world.on('begin-contact', (contact) => {
-      if (this.isInitializing && this.isWaitingForHit && this.lastSpawnedFigure) {
+      if (this.isSequentiallySpawning && this.isWaitingForHit && this.lastSpawnedFigure) {
         const fixtureA = contact.getFixtureA();
         const fixtureB = contact.getFixtureB();
         const bodyA = fixtureA.getBody();
@@ -83,7 +85,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private precomputeInitialization() {
     const timeStep = 1 / 60;
     let safetyCounter = 0;
-    while (this.isInitializing && safetyCounter < 1000) {
+    while (this.isInitializing && safetyCounter < 1000) { // precompute for init only
       this.world.step(timeStep);
       this.checkAndSpawnNext();
       safetyCounter++;
@@ -96,6 +98,11 @@ export class AntiTetrisLoop extends PhysicsWorld {
       this.isWaitingForHit = false;
       this.spawnNextSequential();
     }
+  }
+
+  /** True while a sequential spawn chain is active (init OR refill). */
+  private get isSequentiallySpawning(): boolean {
+    return this.isInitializing || this.isRefilling;
   }
 
   private setupWalls() {
@@ -172,7 +179,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   private spawnInitialFigures() {
     if (this.state.status === 'WAITING') {
-      // Spawn 7 random unique figures in the center
+      // Spawn 7 random unique figures in the center (no gravity yet)
       for (let i = 0; i < 7; i++) {
         const figure = this.spawnFigure(
           this.width / 2 + (Math.random() - 0.5) * 4,
@@ -184,24 +191,39 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
       this.world.setGravity(new Vec2(0, 0));
     } else {
+      // Sequential drop: figures fall one at a time and settle before the next appears.
       this.isInitializing = true;
-      this.initialSpawnsLeft = Settings.FIGURES_PER_REFILL;
+      this.spawnsLeft = Settings.FIGURES_PER_REFILL;
+      this.whiteBlockQueue = Array.from({ length: Settings.FIGURES_PER_REFILL }, () => false);
       this.spawnNextSequential();
     }
   }
 
+  /**
+   * Drops one figure from above and flags that we are waiting for its first
+   * collision. Called by checkAndSpawnNext() after each landing, and once
+   * directly to kick off a batch (init or refill).
+   */
   private spawnNextSequential() {
-    if (this.initialSpawnsLeft > 0) {
+    if (this.spawnsLeft > 0) {
       if (!this.isWaitingForHit) {
         this.isWaitingForHit = true;
         const margin = this.width * 0.2;
         const x = margin + Math.random() * (this.width - margin * 2);
-        const y = this.height + 2; // Spawn above
-        this.lastSpawnedFigure = this.spawnFigure(x, y);
-        this.initialSpawnsLeft--;
+        const y = this.height + 2; // Spawn just above the visible field
+        const hasWhiteBlock = this.whiteBlockQueue.shift() ?? false;
+        this.lastSpawnedFigure = this.spawnFigure(x, y, hasWhiteBlock);
+        this.spawnsLeft--;
       }
     } else {
-      this.isInitializing = false;
+      // Batch complete
+      if (this.isInitializing) {
+        this.isInitializing = false;
+      }
+      if (this.isRefilling) {
+        this.isRefilling = false;
+        this.updateTarget();
+      }
     }
   }
 
@@ -376,15 +398,25 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   private refill() {
     this.state.level++;
-    
-    // On levels >= LEVEL_WHITE_BLOCK_START, one random figure in the batch gets a white block
-    const addWhiteBlock = this.state.level >= Settings.LEVEL_WHITE_BLOCK_START;
-    const whiteBlockBatchIndex = addWhiteBlock ? Math.floor(Math.random() * Settings.FIGURES_PER_REFILL) : -1;
 
-    for (let i = 0; i < Settings.FIGURES_PER_REFILL; i++) {
-      this.spawnFigure(undefined, undefined, i === whiteBlockBatchIndex);
-    }
+    // Build per-figure white-block flags for this batch.
+    // Exactly one figure gets a white block once we reach LEVEL_WHITE_BLOCK_START.
+    const addWhiteBlock = this.state.level >= Settings.LEVEL_WHITE_BLOCK_START;
+    const wbIdx = addWhiteBlock ? Math.floor(Math.random() * Settings.FIGURES_PER_REFILL) : -1;
+    this.whiteBlockQueue = Array.from(
+      { length: Settings.FIGURES_PER_REFILL },
+      (_, i) => i === wbIdx,
+    );
+
+    // Update the target immediately so the new level's color/shape rules apply
+    // even before the batch has physically landed. A second call happens once
+    // the last figure settles (in spawnNextSequential) to pick from fresh arrivals.
     this.updateTarget();
+
+    // Kick off the sequential drop pipeline.
+    this.spawnsLeft = Settings.FIGURES_PER_REFILL;
+    this.isRefilling = true;
+    this.spawnNextSequential();
   }
 
   public handleInput(input: any) { // InputState
