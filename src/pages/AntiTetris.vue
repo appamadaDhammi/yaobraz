@@ -66,7 +66,7 @@ const restartGame = () => {
 
 .GameLayout {
   display: grid;
-  grid-template-rows: 9.5% 84% 6.5%;
+  grid-template-rows: 12.5% 81.25% 6.25%;
   width: 100%;
   height: 100%;
   max-width: calc(100vh * 9 / 16);
