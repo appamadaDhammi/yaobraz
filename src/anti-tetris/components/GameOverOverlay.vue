@@ -4,10 +4,6 @@
       <h1 class="GameOver__title">Игра окончена!</h1>
       <div class="GameOver__stats">
         <div class="Stat">
-          <span class="Stat__label">Счёт:</span>
-          <span class="Stat__value">{{ score }}</span>
-        </div>
-        <div class="Stat">
           <span class="Stat__label">Уровень:</span>
           <span class="Stat__value">{{ level }}</span>
         </div>
@@ -19,7 +15,6 @@
 
 <script setup lang="ts">
 defineProps<{
-  score: number;
   level: number;
 }>();
 

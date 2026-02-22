@@ -4,7 +4,6 @@
       <section class="HeaderSection">
         <AntiTetrisHeader 
           :timer="gameState.timer" 
-          :score="gameState.score"
           :level="gameState.level"
           :targetShape="gameState.targetShape" 
           :targetColor="gameState.targetColor" 
@@ -22,7 +21,6 @@
 
     <GameOverOverlay 
       v-if="gameState.isGameOver" 
-      :score="gameState.score" 
       :level="gameState.level" 
       @restart="restartGame"
     />
@@ -30,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { reactive } from 'vue';
 import AntiTetrisHeader from '../anti-tetris/components/AntiTetrisHeader.vue';
 import AntiTetrisField from '../anti-tetris/components/AntiTetrisField.vue';
 import AntiTetrisFooter from '../anti-tetris/components/AntiTetrisFooter.vue';
@@ -38,7 +36,6 @@ import GameOverOverlay from '../anti-tetris/components/GameOverOverlay.vue';
 import type { GameState } from '../anti-tetris/GameLoop';
 
 const gameState = reactive<GameState>({
-  score: 0,
   level: 1,
   timer: 60,
   targetShape: 'I',
