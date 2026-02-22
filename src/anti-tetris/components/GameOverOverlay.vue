@@ -1,24 +1,55 @@
 <template>
   <div class="GameOver">
     <div class="GameOver__content">
-      <h1 class="GameOver__title">Игра окончена!</h1>
+      <h1 class="GameOver__title">ИГРА ОКОНЧЕНА</h1>
+      
       <div class="GameOver__stats">
         <div class="Stat">
-          <span class="Stat__label">Уровень:</span>
+          <span class="Stat__label">уровень:</span>
           <span class="Stat__value">{{ level }}</span>
         </div>
       </div>
-      <button class="GameOver__btn" @click="$emit('restart')">Играть снова</button>
+
+      <div class="GameOver__qr" v-if="qrUrl">
+        <div class="QrContainer">
+          <QrcodeVue :value="qrUrl" :size="530" level="H" background="#00000000" foreground="#F4EB8C" />
+        </div>
+        <div class="QrHint">отсканируй, чтобы получить приз</div>
+      </div>
+
+      <button class="GameOver__btn" @click="$emit('restart')">ИГРАТЬ СНОВА</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { ref, onMounted } from 'vue';
+import QrcodeVue from 'qrcode.vue';
+import { TELEGRAM_BOT_LINK } from '../Settings';
+
+const props = defineProps<{
   level: number;
 }>();
 
 defineEmits(['restart']);
+
+const qrUrl = ref('');
+
+onMounted(() => {
+  let idCounter = parseInt(localStorage.getItem('ya_edu_anti_tetris_id') || '1', 10);
+  
+  function encode(id: number, rank: number) {
+    return btoa(`id=${id * 1234 + 7654}&rank=${id * rank * 7654 + 1234}`);
+  }
+  
+  const rank = Math.floor(props.level / 4) + 1;
+  const payload = encode(idCounter, rank);
+  
+  idCounter++;
+  localStorage.setItem('ya_edu_anti_tetris_id', idCounter.toString());
+  
+  qrUrl.value = `${TELEGRAM_BOT_LINK}?start=${payload}`;
+});
 </script>
 
 <style scoped>
@@ -28,70 +59,110 @@ defineEmits(['restart']);
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
-  color: #fff;
   font-family: 'Monocraft', monospace;
+  color: #fff;
 }
 
 .GameOver__content {
   text-align: center;
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90%;
+  max-width: 600px;
 }
 
 .GameOver__title {
-  font-size: 3rem;
-  margin-bottom: 2rem;
-  background: linear-gradient(to right, #ff416c, #ff4b2b);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 4rem;
+  margin-bottom: 2.5rem;
+  color: #F6C578;
+  text-shadow: 0 4px 15px rgba(246, 197, 120, 0.4);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .GameOver__stats {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 3rem;
+  margin-bottom: 2.5rem;
+  width: 100%;
 }
 
 .Stat {
   display: flex;
   justify-content: space-between;
-  gap: 2rem;
-  font-size: 1.5rem;
+  align-items: center;
+  padding: 0 1rem;
 }
 
 .Stat__label {
-  opacity: 0.7;
+  color: #C2B9FA;
+  font-size: 2rem;
+  text-transform: lowercase;
 }
 
 .Stat__value {
-  font-weight: bold;
+  color: #F6C578;
+  font-size: 3.5rem;
+}
+
+.GameOver__qr {
+  margin-bottom: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.QrContainer {
+  background: rgba(30, 30, 40, 0.6);
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 2px solid rgba(244, 235, 140, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.QrHint {
+  color: #C2B9FA;
+  font-size: 1.8rem;
+  opacity: 0.8;
+  max-width: 300px;
+  line-height: 1.4;
 }
 
 .GameOver__btn {
-  background: #fff;
-  color: #000;
+  background: #EC775E;
+  color: #fff;
   border: none;
-  padding: 1rem 2.5rem;
-  font-size: 1.2rem;
-  font-weight: bold;
-  border-radius: 50px;
+  padding: 1.5rem 3rem;
+  font-size: 1.8rem;
+  font-family: 'Monocraft', monospace;
+  border-radius: 12px;
   cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.3), 0 10px 20px rgba(236, 119, 94, 0.3);
+  transform: translateY(0);
 }
 
-.GameOver__btn:hover {
-  transform: scale(1.05);
-  background: #eee;
+.GameOver__btn:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 rgba(0,0,0,0.3), 0 4px 10px rgba(236, 119, 94, 0.2);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 </style>

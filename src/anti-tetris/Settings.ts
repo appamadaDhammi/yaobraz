@@ -1,5 +1,5 @@
 /** Длительность раунда в секундах */
-export const GAME_DURATION = 600;
+export const GAME_DURATION = 60;
 
 /** Множитель скорости игры (влияет на всё) */
 export const GAME_SPEED = 1.0;
@@ -107,6 +107,9 @@ export const START_TEXT = 'НАЧАТЬ ИГРУ';
 /** Текст туториала */
 export const TUTORIAL_TEXT = 'КИДАЙ ВВЕРХ';
 
+/** Ссылка на Telegram бота */
+export const TELEGRAM_BOT_LINK = import.meta.env.VITE_TELEGRAM_BOT_LINK || 'https://t.me/your_bot_name';
+
 export type FigureShape = (typeof FIGURE_SHAPES)[number];
 export type FigureColor = (typeof FIGURE_COLORS)[number];
 
@@ -147,4 +150,4 @@ export const MAX_FIGURE_VELOCITY = 20;
 export const FIGURE_THROW_CEILING_OFFSET = 2.0;
 
 /** Радиус окружности для спавна фигур на старте */
-export const SPAWN_RADIUS = 3.0;
+export const SPAWN_RADIUS = 2.0;
