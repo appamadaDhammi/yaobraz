@@ -1,7 +1,7 @@
 /**
  * Dynamic pixel-art block texture generator with rotation-aware lighting.
  *
- * Generates a 2×2 sub-cell texture where edge shading is computed from
+ * Generates a 1×1 sub-cell texture where edge shading is computed from
  * the figure's current rotation angle and a fixed light source at the
  * screen's top-left corner.
  *
@@ -147,16 +147,13 @@ export function generateDynamicBlockTexture(
   const ctx = canvas.getContext('2d')!;
 
   const mixedInfo = Settings.MIXED_COLOR_MAP[colorKey];
-  let screenTL: string, screenTR: string, screenBL: string, screenBR: string;
+  let baseColor: string;
 
   if (mixedInfo) {
-    screenTL = mixedInfo.topLeft;
-    screenTR = mixedInfo.topRight;
-    screenBL = mixedInfo.bottomLeft;
-    screenBR = mixedInfo.bottomRight;
+    // Use the average / primary color for a 1×1 cell — pick topLeft as representative
+    baseColor = mixedInfo.topLeft;
   } else {
-    const c = Settings.COLOR_PALETTE[colorKey] || '#FFFFFF';
-    screenTL = screenTR = screenBL = screenBR = c;
+    baseColor = Settings.COLOR_PALETTE[colorKey] || '#FFFFFF';
   }
 
   // --- Compute edge dot products ---
@@ -174,18 +171,8 @@ export function generateDynamicBlockTexture(
   const bottomDot = ( sinA) * lx + (-cosA) * ly; // normal (0,-1) rotated
   const leftDot   = (-cosA) * lx + (-sinA) * ly; // normal (-1,0) rotated
 
-  const half = size / 2;
-
-  // Texture canvas is Y-down; game canvas is Y-flipped.
-  // screenTL -> texture (0, half)
-  // screenTR -> texture (half, half)
-  // screenBL -> texture (0, 0)
-  // screenBR -> texture (half, 0)
-
-  drawShadedSubCell(ctx, 0,    0,    half, screenBL, topDot, rightDot, bottomDot, leftDot);
-  drawShadedSubCell(ctx, half, 0,    half, screenBR, topDot, rightDot, bottomDot, leftDot);
-  drawShadedSubCell(ctx, 0,    half, half, screenTL, topDot, rightDot, bottomDot, leftDot);
-  drawShadedSubCell(ctx, half, half, half, screenTR, topDot, rightDot, bottomDot, leftDot);
+  // Single 1×1 sub-cell covering the full block
+  drawShadedSubCell(ctx, 0, 0, size, baseColor, topDot, rightDot, bottomDot, leftDot);
 
   return canvas;
 }
