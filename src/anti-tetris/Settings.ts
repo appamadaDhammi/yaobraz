@@ -1,5 +1,5 @@
 /** Длительность раунда в секундах */
-export const GAME_DURATION = 60;
+export const GAME_DURATION = 600;
 
 /** Множитель скорости игры (влияет на всё) */
 export const GAME_SPEED = 1.0;
@@ -145,3 +145,6 @@ export const MAX_FIGURE_VELOCITY = 20;
 
 /** Отступ выше видимого поля, при превышении которого фигура считается выброшенной (в игровых единицах) */
 export const FIGURE_THROW_CEILING_OFFSET = 2.0;
+
+/** Радиус окружности для спавна фигур на старте */
+export const SPAWN_RADIUS = 3.0;

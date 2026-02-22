@@ -175,9 +175,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
       // Spawn 7 random unique figures in the center (no gravity yet)
       const figuresToSpawn = Settings.FIGURES_PER_REFILL + Settings.MIN_FIGURES_TO_REFILL;
       for (let i = 0; i < figuresToSpawn; i++) {
+        const angle = (i / figuresToSpawn) * Math.PI * 2;
         const figure = this.spawnFigure(
-          this.width / 2 + (Math.random() - 0.5) * 4,
-          this.height / 2 + (Math.random() - 0.5) * 4
+          this.width / 2 + Math.cos(angle) * Settings.SPAWN_RADIUS,
+          this.height / 2 + Math.sin(angle) * Settings.SPAWN_RADIUS
         );
         // Random initial velocity for "free flow"
         figure.body.setLinearVelocity(new Vec2((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5));
