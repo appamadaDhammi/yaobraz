@@ -4,13 +4,14 @@ import { Figure } from './Figure';
 import * as Settings from './Settings';
 
 export interface GameState {
-  score: number;
   level: number;
   timer: number;
   targetShape: Settings.FigureShape;
   targetColor: Settings.FigureColor | 'white';
   isGameOver: boolean;
   hintVisible: boolean;
+  status: 'WAITING' | 'PLAYING';
+  tutorialActive: boolean;
 }
 
 export class AntiTetrisLoop extends PhysicsWorld {
@@ -34,13 +35,14 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.timeScale = Settings.GAME_SPEED * Settings.PHYSICS_SPEED;
     
     this.state = {
-      score: 0,
       level: 1,
       timer: Settings.GAME_DURATION,
       targetShape: 'I',
       targetColor: 'white',
       isGameOver: false,
-      hintVisible: true,
+      hintVisible: false,
+      status: 'WAITING',
+      tutorialActive: false,
     };
 
     this.setupWalls();
@@ -169,9 +171,23 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   private spawnInitialFigures() {
-    this.isInitializing = true;
-    this.initialSpawnsLeft = Settings.FIGURES_PER_REFILL;
-    this.spawnNextSequential();
+    if (this.state.status === 'WAITING') {
+      // Spawn 7 random unique figures in the center
+      for (let i = 0; i < 7; i++) {
+        const figure = this.spawnFigure(
+          this.width / 2 + (Math.random() - 0.5) * 4,
+          this.height / 2 + (Math.random() - 0.5) * 4
+        );
+        // Random initial velocity for "free flow"
+        figure.body.setLinearVelocity(new Vec2((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5));
+        figure.body.setAngularVelocity((Math.random() - 0.5) * 2);
+      }
+      this.world.setGravity(new Vec2(0, 0));
+    } else {
+      this.isInitializing = true;
+      this.initialSpawnsLeft = Settings.FIGURES_PER_REFILL;
+      this.spawnNextSequential();
+    }
   }
 
   private spawnNextSequential() {
@@ -220,6 +236,29 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   protected onUpdate() {
+    if (this.state.status === 'WAITING') {
+      // Keep figures in the center area
+      for (const fig of this.figures) {
+        const pos = fig.body.getPosition();
+        const center = new Vec2(this.width / 2, this.height / 2);
+        const toCenter = center.sub(pos);
+        
+        // Soft force towards center if they drift too far
+        if (toCenter.length() > 3) {
+          fig.body.applyForceToCenter(toCenter.mul(2));
+        }
+        
+        // Ensure some minimum movement
+        const vel = fig.body.getLinearVelocity();
+        if (vel.length() < 1) {
+          fig.body.applyLinearImpulse(
+            new Vec2((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2),
+            fig.body.getWorldCenter()
+          );
+        }
+      }
+    }
+
     if (this.state.isGameOver) return;
 
     this.checkAndSpawnNext();
@@ -310,8 +349,11 @@ export class AntiTetrisLoop extends PhysicsWorld {
     const isTarget = figure.shape === this.state.targetShape && 
                      (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
 
+    // Remove figure from the world FIRST so updateTarget can't pick it again
+    figure.destroy(this.world);
+    this.figures.splice(index, 1);
+
     if (isTarget) {
-      this.state.score += Settings.POINTS_PER_FIGURE * this.state.level;
       if (figure.hasCoin) {
         this.state.timer += Settings.COIN_TIME_BONUS;
       }
@@ -319,8 +361,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
       this.updateTarget();
     }
 
-    figure.destroy(this.world);
-    this.figures.splice(index, 1);
+    if (this.state.tutorialActive) {
+      this.state.tutorialActive = false;
+      this.state.hintVisible = false;
+    }
   }
 
   private refill() {
@@ -332,6 +376,20 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   public handleInput(input: any) { // InputState
+    if (this.state.status === 'WAITING') {
+      if (input.isPressed) {
+        this.state.status = 'PLAYING';
+        this.state.tutorialActive = true;
+        this.state.hintVisible = true;
+        this.world.setGravity(new Vec2(0, Settings.DEFAULT_GRAVITY));
+        // Give figures a little nudge to start falling naturally
+        for (const fig of this.figures) {
+          fig.body.setAngularVelocity((Math.random() - 0.5) * 5);
+        }
+      }
+      return;
+    }
+
     if (this.state.isGameOver) return;
 
     if (input.justPressed) {

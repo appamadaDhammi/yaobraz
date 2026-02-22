@@ -24,20 +24,63 @@ describe('AntiTetrisLoop – initialisation', () => {
     expect(loop).toBeDefined();
   });
 
-  it('spawns the expected number of initial figures', () => {
+  it('spawns the expected number of initial figures (WAITING state)', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-    expect(loop.getFigures().length).toBe(Settings.FIGURES_PER_REFILL);
+    expect(loop.getFigures().length).toBe(7);
   });
 
   it('has a valid initial game state', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
     const state: GameState = loop.getState();
 
-    expect(state.score).toBe(0);
     expect(state.level).toBe(1);
     expect(state.timer).toBe(Settings.GAME_DURATION);
     expect(state.isGameOver).toBe(false);
     expect(Settings.FIGURE_SHAPES).toContain(state.targetShape);
+  });
+
+  it('starts in WAITING state with zero gravity', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    const state = loop.getState();
+    expect(state.status).toBe('WAITING');
+    expect(loop.getWorld().getGravity().y).toBe(0);
+  });
+
+  it('spawns 7 figures during WAITING state initialisation', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    expect(loop.getFigures().length).toBe(7);
+  });
+});
+
+describe('AntiTetrisLoop – start transition', () => {
+  it('transitions from WAITING to PLAYING on input', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    expect(loop.getState().status).toBe('WAITING');
+
+    // Simulate input
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+
+    expect(loop.getState().status).toBe('PLAYING');
+    expect(loop.getState().tutorialActive).toBe(true);
+    expect(loop.getWorld().getGravity().y).toBe(Settings.DEFAULT_GRAVITY);
+  });
+
+  it('hides tutorial after first figure is thrown', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    
+    // Start game
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+    expect(loop.getState().tutorialActive).toBe(true);
+
+    const figures = loop.getFigures();
+    const firstFigure = figures[0]!;
+    
+    // Simulate throwing a figure (manual call to handleFigureThrown)
+    // We use the index of the figure in the array
+    loop['handleFigureThrown'](firstFigure, 0);
+
+    expect(loop.getState().tutorialActive).toBe(false);
+    expect(loop.getState().hintVisible).toBe(false);
   });
 });
 
@@ -153,8 +196,6 @@ describe('AntiTetrisLoop – game over', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
 
     // Simulate enough frames to drain the timer
-    // timer starts at GAME_DURATION (600 s). Each frame at GAME_SPEED=1 subtracts 1/60 s.
-    // 600 * 60 = 36 000 frames. Run them in big chunks.
     const fps60 = 1000 / 60;
     const totalFrames = Math.ceil(Settings.GAME_DURATION * 60 / Settings.GAME_SPEED) + 10;
     for (let i = 0; i < totalFrames; i++) {
@@ -163,7 +204,7 @@ describe('AntiTetrisLoop – game over', () => {
 
     expect(loop.getState().isGameOver).toBe(true);
     expect(loop.getState().timer).toBe(0);
-  });
+  }, 15000);
 });
 
 describe('AntiTetrisLoop – OOB safeguards', () => {

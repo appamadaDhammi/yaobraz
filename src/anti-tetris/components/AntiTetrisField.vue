@@ -2,11 +2,17 @@
   <div class="GameField" ref="container">
     <canvas ref="canvas"></canvas>
     
-    <div v-if="state.hintVisible" class="Hint">
+    <div v-if="state.status === 'WAITING'" class="StartOverlay">
+      <div class="StartOverlay__content">
+        {{ Settings.START_TEXT }}
+      </div>
+    </div>
+    
+    <div v-if="state.hintVisible && state.tutorialActive" class="Hint">
       <div class="Hint__arrow">↑</div>
       <div class="Hint__text">
-        <span>{{ Settings.HINT_TEXT }}</span>
-        <span>{{ Settings.HINT_TEXT }}</span>
+        <span>{{ Settings.TUTORIAL_TEXT }}</span>
+        <span>{{ Settings.TUTORIAL_TEXT }}</span>
       </div>
       <div class="Hint__arrow">↑</div>
     </div>
@@ -29,13 +35,14 @@ let input: InputHandler;
 let rafId: number;
 
 const state = reactive<GameState>({
-  score: 0,
   level: 1,
   timer: Settings.GAME_DURATION,
   targetShape: 'I',
   targetColor: 'white',
   isGameOver: false,
-  hintVisible: true,
+  hintVisible: false,
+  status: 'WAITING',
+  tutorialActive: false,
 });
 
 const emit = defineEmits(['update-state']);
@@ -53,7 +60,7 @@ onMounted(() => {
 
   const isSlowInit = window.location.hash.includes('slowInit=1');
   loop = new AntiTetrisLoop(width, height, isSlowInit);
-  input = new InputHandler(canvas.value, dynamicScale);
+  input = new InputHandler(container.value, dynamicScale);
 
   const ctx = canvas.value.getContext('2d');
   if (!ctx) return;
@@ -177,5 +184,41 @@ canvas {
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-15px); }
+}
+
+.StartOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
+.StartOverlay__content {
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 6cqw;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2rem;
+  background: rgba(148, 135, 223, 0.2);
+  border: 4px solid #9487DF;
+  border-radius: 1rem;
+  box-shadow: 0 0 30px rgba(148, 135, 223, 0.3);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
 }
 </style>

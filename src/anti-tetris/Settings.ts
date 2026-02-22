@@ -19,17 +19,14 @@ export const COIN_TIME_BONUS = 10;
 /** Доп. шанс появления 2-й монеты в наборе */
 export const COIN_SECOND_BONUS_CHANCE = 0.1;
 
-/** Очки за одну правильную фигуру (множится на уровень) */
-export const POINTS_PER_FIGURE = 100;
-
 /** Палитра цветов фигур (теперь ключи текстур) */
 export const FIGURE_COLORS = [
   'blue',
   'orange',
   'red',
   'yellow',
-  'red-yellow',
-  'yellow-blue',
+  // 'red-yellow',
+  // 'yellow-blue',
 ] as const;
 
 /** Базовые цвета палитры */
@@ -42,8 +39,8 @@ export const COLOR_PALETTE: Record<string, string> = {
 
 /** Раскладка квадрантов для смешанных цветов (2×2) */
 export const MIXED_COLOR_MAP: Record<string, { topLeft: string; topRight: string; bottomLeft: string; bottomRight: string }> = {
-  'red-yellow':  { topLeft: '#EC775E', topRight: '#F4EB8C', bottomLeft: '#F4EB8C', bottomRight: '#EC775E' },
-  'yellow-blue': { topLeft: '#F4EB8C', topRight: '#9487DF', bottomLeft: '#9487DF', bottomRight: '#F4EB8C' },
+  // 'red-yellow':  { topLeft: '#EC775E', topRight: '#F4EB8C', bottomLeft: '#F4EB8C', bottomRight: '#EC775E' },
+  // 'yellow-blue': { topLeft: '#F4EB8C', topRight: '#9487DF', bottomLeft: '#9487DF', bottomRight: '#F4EB8C' },
 };
 
 /** Гекс-цвета для UI (соответствующие текстурам) */
@@ -52,8 +49,8 @@ export const TEXTURE_COLORS: Record<(typeof FIGURE_COLORS)[number] | 'white', st
   'orange':  '#F6C578',
   'red':     '#EC775E',
   'yellow':  '#F4EB8C',
-  'red-yellow':  '#F0A16E',
-  'yellow-blue': '#C4B9DE',
+  // 'red-yellow':  '#F0A16E',
+  // 'yellow-blue': '#C4B9DE',
   'white':   '#FFFFFF',
 };
 /** Угол падения света для теней блоков (в радианах, 0 = вправо, PI/2 = вниз) */
@@ -97,6 +94,12 @@ export const DRAG_ZONE_RATIO = 1 / 8;
 
 /** Подсказка на стрелке */
 export const HINT_TEXT = 'кидай вверх';
+
+/** Текст на стартовом экране */
+export const START_TEXT = 'КОСНИСЬ ЧТОБЫ НАЧАТЬ ИГРУ';
+
+/** Текст туториала */
+export const TUTORIAL_TEXT = 'КИДАЙ ВВЕРХ';
 
 export type FigureShape = (typeof FIGURE_SHAPES)[number];
 export type FigureColor = (typeof FIGURE_COLORS)[number];
