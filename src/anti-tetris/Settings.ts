@@ -5,7 +5,7 @@ export const GAME_DURATION = 600;
 export const GAME_SPEED = 1.0;
 
 /** Множитель скорости физики (влияет только на движение) */
-export const PHYSICS_SPEED = 2.0;
+export const PHYSICS_SPEED = 1.6;
 
 /** Минимальное кол-во фигур для вызова пополнения */
 export const MIN_FIGURES_TO_REFILL = 3;
@@ -69,7 +69,7 @@ export const SHADOW_DARKEN_FACTOR = 0.05;
 export const FIGURE_SHAPES = ['I', 'O', 'T', 'S', 'Z', 'L', 'J'] as const;
 
 /** Максимальная сила MouseJoint */
-export const MOUSE_JOINT_MAX_FORCE = 1000;
+export const MOUSE_JOINT_MAX_FORCE = 700;
 
 /** Частота отклика MouseJoint (частота колебаний) */
 export const MOUSE_JOINT_FREQUENCY = 15;
@@ -114,13 +114,19 @@ export const DEFAULT_GRAVITY = -10;
 export const FIGURE_FRICTION = 0.3;
 
 /** Упругость фигур (0-1, bounciness) */
-export const FIGURE_RESTITUTION = 0.1;
+export const FIGURE_RESTITUTION = 0.05;
 
 /** Затухание линейной скорости фигуры */
 export const FIGURE_LINEAR_DAMPING = 0.1;
 
-/** Затухание угловой скорости фигуры */
+/** Затухание угловой скорости фигуры (по умолчанию) */
 export const FIGURE_ANGULAR_DAMPING = 0.1;
+
+/** Затухание угловой скорости фигуры ПОД ХВАТОМ (чтобы не крутилась бешено) */
+export const FIGURE_DRAG_ANGULAR_DAMPING = 10.0;
+
+/** Дистанция между точкой хвата и таргетом, при которой хват рвется */
+export const FIGURE_DRAG_LOSS_DISTANCE = 4.0;
 
 /** Максимальная линейная скорость фигуры (предотвращает туннелирование) */
 export const MAX_FIGURE_VELOCITY = 20;

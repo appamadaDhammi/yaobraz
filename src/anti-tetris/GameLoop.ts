@@ -379,6 +379,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
           bodyB: hitFigure.body,
         };
         this.mouseJoint = this.world.createJoint(new MouseJoint(def)) as MouseJoint;
+        hitFigure.body.setAngularDamping(Settings.FIGURE_DRAG_ANGULAR_DAMPING);
         hitFigure.body.setAwake(true);
       }
     }
@@ -392,10 +393,22 @@ export class AntiTetrisLoop extends PhysicsWorld {
         Math.max(1, Math.min(this.width - 1, input.x)),
         Math.max(safetyOffset + 0.2, input.y)
       ));
+
+      // Check for drag loss distance
+      const target = this.mouseJoint.getTarget();
+      const anchor = this.mouseJoint.getAnchorB();
+      const dist = Vec2.distance(target, anchor);
+      if (dist > Settings.FIGURE_DRAG_LOSS_DISTANCE) {
+        figureBody.setAngularDamping(Settings.FIGURE_ANGULAR_DAMPING);
+        this.world.destroyJoint(this.mouseJoint);
+        this.mouseJoint = null;
+      }
     }
 
     if (input.justReleased || !input.isPressed) {
       if (this.mouseJoint) {
+        const body = this.mouseJoint.getBodyB();
+        body.setAngularDamping(Settings.FIGURE_ANGULAR_DAMPING);
         this.world.destroyJoint(this.mouseJoint);
         this.mouseJoint = null;
       }
