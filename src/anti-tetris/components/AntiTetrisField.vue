@@ -52,11 +52,17 @@ onMounted(() => {
 
   const rect = container.value.getBoundingClientRect();
   const width = Settings.FIELD_WIDTH;
+  const dpr = window.devicePixelRatio || 1;
   const dynamicScale = rect.width / width;
   const height = rect.height / dynamicScale;
 
-  canvas.value.width = rect.width;
-  canvas.value.height = rect.height;
+  // Set display size
+  canvas.value.style.width = `${rect.width}px`;
+  canvas.value.style.height = `${rect.height}px`;
+
+  // Set actual buffer size scaled by DPR
+  canvas.value.width = Math.floor(rect.width * dpr);
+  canvas.value.height = Math.floor(rect.height * dpr);
 
   const isSlowInit = window.location.hash.includes('slowInit=1');
   loop = new AntiTetrisLoop(width, height, isSlowInit);
@@ -64,6 +70,9 @@ onMounted(() => {
 
   const ctx = canvas.value.getContext('2d');
   if (!ctx) return;
+
+  // Scale context to use CSS pixels for drawing
+  ctx.scale(dpr, dpr);
 
   const frame = (time: number) => {
     const inputState = input.getState();
@@ -75,7 +84,7 @@ onMounted(() => {
     Object.assign(state, loopState);
     emit('update-state', { ...loopState });
 
-    render(ctx, width, height, dynamicScale);
+    render(ctx, width, height, dynamicScale, dpr);
     rafId = requestAnimationFrame(frame);
   };
 
@@ -86,14 +95,15 @@ onUnmounted(() => {
   cancelAnimationFrame(rafId);
 });
 
-const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number, scale: number) => {
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number, scale: number, dpr: number) => {
+  // Clear the drawing area (CSS pixels)
+  ctx.clearRect(0, 0, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
   
   // Use passed scale
   
   // Flip Y axis
   ctx.save();
-  ctx.translate(0, ctx.canvas.height);
+  ctx.translate(0, ctx.canvas.height / dpr);
   ctx.scale(1, -1);
 
   for (const figure of loop.getFigures()) {
@@ -101,9 +111,11 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
     const angle = figure.body.getAngle();
 
     // Generate textures: one for figure color, one white texture if needed
-    const tex = generateDynamicBlockTexture(figure.color, angle, Math.round(scale));
+    // Texture itself must be rendered at physical pixels (scale * dpr)
+    const physicalScale = scale * dpr;
+    const tex = generateDynamicBlockTexture(figure.color, angle, Math.round(physicalScale));
     const whiteTex = figure.hasWhiteBlock
-      ? generateDynamicBlockTexture('white', angle, Math.round(scale))
+      ? generateDynamicBlockTexture('white', angle, Math.round(physicalScale))
       : null;
     
     ctx.save();
@@ -124,6 +136,7 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
       }
 
       const isWhiteBlock = figure.hasWhiteBlock && fixtureIndex === figure.whiteBlockIndex;
+      // Destination size is in CSS pixels because context is already scaled by DPR
       ctx.drawImage(isWhiteBlock ? whiteTex! : tex, minX * scale, minY * scale, 1 * scale, 1 * scale);
       fixtureIndex++;
     }
