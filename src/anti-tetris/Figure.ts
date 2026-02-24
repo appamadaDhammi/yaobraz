@@ -12,39 +12,17 @@ const SHAPES: Record<FigureShape, number[][]> = {
   J: [[0, 0], [1, 0], [1, 1], [1, 2]],
 };
 
-/**
- * Index of the interior (non-edge) block for each shape that will be used as
- * the "white block". Chosen to be visually interior, never on the outer perimeter.
- */
-const WHITE_BLOCK_INDEX: Record<FigureShape, number> = {
-  I: 1, // second block from one end
-  O: 1, // any internal block (all share edges, pick index 1)
-  T: 1, // center of the top row
-  S: 1, // middle overlap
-  Z: 1, // middle overlap
-  L: 1, // middle of the vertical bar
-  J: 1, // middle of the vertical bar
-};
-
 export class Figure {
   public body: any; // planck.Body
   public shape: FigureShape;
   public color: FigureColor;
-  /** Whether this figure carries a "white block" that doubles gravity */
-  public hasWhiteBlock: boolean = false;
-  /** Which fixture index (0-based) is the white block */
-  public whiteBlockIndex: number = -1;
   /** Whether this figure is newly spawned and passes through the regular floor */
   public isNewFigure: boolean = false;
-  
-  constructor(world: World, shape: FigureShape, color: FigureColor, x: number, y: number, hasWhiteBlock: boolean = false, isNewFigure: boolean = false) {
+
+  constructor(world: World, shape: FigureShape, color: FigureColor, x: number, y: number, isNewFigure: boolean = false) {
     this.shape = shape;
     this.color = color;
-    this.hasWhiteBlock = hasWhiteBlock;
     this.isNewFigure = isNewFigure;
-    if (hasWhiteBlock) {
-      this.whiteBlockIndex = WHITE_BLOCK_INDEX[shape];
-    }
 
     const bodyDef: BodyDef = {
       type: 'dynamic',

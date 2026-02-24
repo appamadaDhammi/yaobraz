@@ -2,11 +2,11 @@
   <div class="AntiTetris App">
     <div class="GameLayout">
       <section class="HeaderSection">
-        <AntiTetrisHeader 
-          :timer="gameState.timer" 
+        <AntiTetrisHeader
+          :timer="gameState.timer"
           :level="gameState.level"
-          :targetShape="gameState.targetShape" 
-          :targetColor="gameState.targetColor" 
+          :targetShape="gameState.targetShape"
+          :targetColor="gameState.targetColor"
         />
       </section>
       
@@ -42,6 +42,9 @@ const gameState = reactive<GameState>({
   targetColor: 'white',
   isGameOver: false,
   hintVisible: true,
+  status: 'WAITING',
+  tutorialActive: false,
+  coinsCollected: 0,
 });
 
 const onStateUpdate = (newState: GameState) => {

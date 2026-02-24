@@ -23,10 +23,11 @@ This is a Vue 3 + TypeScript + Vite exhibition stand with two games. Only Anti-T
 ### Game module structure (`src/anti-tetris/`)
 
 **Physics layer:**
-- [GameLoop.ts](src/anti-tetris/GameLoop.ts) — extends `PhysicsWorld`, owns all game state and physics. This is the brain of the game: figure spawning, coin mechanics, white-block system, grab/drag via Planck `MouseJoint`, timer, level progression.
+- [GameLoop.ts](src/anti-tetris/GameLoop.ts) — extends `PhysicsWorld`, owns all game state and physics. This is the brain of the game: figure spawning, coin mechanics, grab/drag via Planck `MouseJoint`, timer, level progression.
 - [PhysicsWorld.ts](src/core/PhysicsWorld.ts) — abstract base that drives a fixed-timestep Planck.js loop. Subclasses implement `onPostStep()` and `onUpdate()`.
 - [Figure.ts](src/anti-tetris/Figure.ts) — wraps a Planck rigid body representing a Tetris shape.
 - [Coin.ts](src/anti-tetris/Coin.ts) — coin power-up that grants time bonuses; only collectible when overlapping the target figure.
+- [BlockTexture.ts](src/anti-tetris/BlockTexture.ts) — block texture/color rendering utilities.
 - [Settings.ts](src/anti-tetris/Settings.ts) — single source of truth for all magic numbers (gravity, speeds, sizes, level thresholds, etc.).
 
 **Vue layer:**
@@ -37,6 +38,8 @@ This is a Vue 3 + TypeScript + Vite exhibition stand with two games. Only Anti-T
 **Coordinate system:** Planck uses Y-up; canvas uses Y-down. All rendering applies a Y-flip transform. DPR scaling is applied to the canvas for high-DPI displays.
 
 **Collision categories:** Figures use bitmask collision categories (`DEFAULT`, `NEW_FIGURE`, `PLATFORM`) to control which bodies interact during spawn and platform-refill phases.
+
+**Tunneling prevention:** `PhysicsWorld.onPostStep()` clamps body positions every substep to prevent fast figures from tunneling through walls/floor. This runs per-substep, not per-frame.
 
 ### Game state machine
 
@@ -50,12 +53,12 @@ WAITING → PLAYING → GAME_OVER
 
 ### Level progression
 
-| Level | Target | Coin chance |
-|-------|--------|-------------|
-| 1 | white | 100% |
-| 2–3 | white | 50% + 10% bonus |
-| 4+ | color | 1/level + 10% bonus |
-| 8+ | — | white-block figures spawn (double gravity) |
+| Level | Target |
+|-------|--------|
+| 1–2 | white (any color matches) |
+| 3+ | color (must match figure color) |
+
+(`LEVEL_COLOR_START = 3` in Settings.ts)
 
 ## Conventions
 

@@ -13,7 +13,6 @@
  */
 
 import * as Settings from './Settings';
-import type { FigureColor } from './Settings';
 
 // ---------------------------------------------------------------------------
 // Colour helpers

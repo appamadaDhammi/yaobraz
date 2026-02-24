@@ -2,6 +2,7 @@ import { Vec2, Box, MouseJoint, type MouseJointDef } from 'planck';
 import { PhysicsWorld } from '../core/PhysicsWorld';
 import { Figure } from './Figure';
 import { Coin } from './Coin';
+import { Meteorite } from './Meteorite';
 import * as Settings from './Settings';
 
 export interface GameState {
@@ -13,12 +14,15 @@ export interface GameState {
   hintVisible: boolean;
   status: 'WAITING' | 'PLAYING';
   tutorialActive: boolean;
+  coinsCollected: number;
 }
 
 export class AntiTetrisLoop extends PhysicsWorld {
   private figures: Figure[] = [];
   private coins: Coin[] = [];
   private coinSpawnTimer: number = 0;
+  private meteorites: Meteorite[] = [];
+  private meteoriteSpawnTimer: number = 0;
   private state: GameState;
   private width: number;
   private height: number;
@@ -28,7 +32,6 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private isRefilling: boolean = false;
   private isWaitingForSpawnZoneClear: boolean = false;
   private spawnsLeft: number = 0;
-  private whiteBlockQueue: boolean[] = [];
   private lastSpawnedFigure: Figure | null = null;
   private platformBody: any = null;
 
@@ -48,9 +51,11 @@ export class AntiTetrisLoop extends PhysicsWorld {
       hintVisible: false,
       status: 'WAITING',
       tutorialActive: false,
+      coinsCollected: 0,
     };
 
     this.coinSpawnTimer = Settings.COIN_SPAWN_DELAY_MIN + Math.random() * (Settings.COIN_SPAWN_DELAY_MAX - Settings.COIN_SPAWN_DELAY_MIN);
+    this.meteoriteSpawnTimer = Settings.METEORITE_SPAWN_DELAY_MIN + Math.random() * (Settings.METEORITE_SPAWN_DELAY_MAX - Settings.METEORITE_SPAWN_DELAY_MIN);
 
     this.setupWalls();
     this.setupContactListener();
@@ -60,6 +65,16 @@ export class AntiTetrisLoop extends PhysicsWorld {
     if (!this.isSlowInit && this.isInitializing) {
       this.precomputeInitialization();
     }
+  }
+
+  private getLevelConfig(level: number): Settings.LevelConfig {
+    const idx = Math.min(level - 1, Settings.LEVEL_CONFIG.length - 1);
+    return Settings.LEVEL_CONFIG[idx]!;
+  }
+
+  private isFigureTarget(figure: Figure): boolean {
+    return figure.shape === this.state.targetShape &&
+           (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
   }
 
   private setupContactListener() {
@@ -193,8 +208,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   private spawnInitialFigures() {
     if (this.state.status === 'WAITING') {
-      // Spawn 7 random unique figures in the center (no gravity yet)
-      const figuresToSpawn = Settings.FIGURES_PER_REFILL + Settings.MIN_FIGURES_TO_REFILL;
+      // Spawn level-1 figure count in the center (no gravity yet)
+      const figuresToSpawn = this.getLevelConfig(1).i;
       for (let i = 0; i < figuresToSpawn; i++) {
         const angle = (i / figuresToSpawn) * Math.PI * 2;
         const figure = this.spawnFigure(
@@ -210,8 +225,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
     } else {
       // Sequential drop: figures fall one at a time and settle before the next appears.
       this.isInitializing = true;
-      this.spawnsLeft = Settings.FIGURES_PER_REFILL;
-      this.whiteBlockQueue = Array.from({ length: Settings.FIGURES_PER_REFILL }, () => false);
+      const initCount = this.getLevelConfig(this.state.level).i;
+      this.spawnsLeft = initCount;
       this.spawnNextSequential();
     }
   }
@@ -228,8 +243,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
         const margin = this.width * 0.2;
         const x = margin + Math.random() * (this.width - margin * 2);
         const y = this.height + 2; // Spawn just above the visible field
-        const hasWhiteBlock = this.whiteBlockQueue.shift() ?? false;
-        this.lastSpawnedFigure = this.spawnFigure(x, y, hasWhiteBlock);
+        this.lastSpawnedFigure = this.spawnFigure(x, y);
         this.spawnsLeft--;
       }
     } else {
@@ -240,28 +254,29 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
   }
 
-  private spawnFigure(customX?: number, customY?: number, hasWhiteBlock: boolean = false, isNewFigure: boolean = false): Figure {
+  private spawnFigure(customX?: number, customY?: number, isNewFigure: boolean = false): Figure {
     const shape = Settings.FIGURE_SHAPES[Math.floor(Math.random() * Settings.FIGURE_SHAPES.length)];
     const color = Settings.FIGURE_COLORS[Math.floor(Math.random() * Settings.FIGURE_COLORS.length)];
     const x = customX !== undefined ? customX : Math.random() * (this.width - 4) + 2;
     const y = customY !== undefined ? customY : this.height + Math.random() * 5;
-    
-    const figure = new Figure(this.world, shape!, color!, x, y, hasWhiteBlock, isNewFigure);
+
+    const figure = new Figure(this.world, shape!, color!, x, y, isNewFigure);
     this.figures.push(figure);
     return figure;
   }
 
   private updateTarget() {
     if (this.figures.length === 0) return;
-    
-    const randomFigure = this.figures[Math.floor(Math.random() * this.figures.length)];
-    if (randomFigure) {
-      this.state.targetShape = randomFigure.shape;
-      
+
+    const selectedFigure = this.figures[Math.floor(Math.random() * this.figures.length)];
+
+    if (selectedFigure) {
+      this.state.targetShape = selectedFigure.shape;
+
       if (this.state.level < Settings.LEVEL_COLOR_START) {
         this.state.targetColor = 'white';
       } else {
-        this.state.targetColor = randomFigure.color;
+        this.state.targetColor = selectedFigure.color;
       }
     }
   }
@@ -321,29 +336,51 @@ export class AntiTetrisLoop extends PhysicsWorld {
         }
       }
 
-      // Check coin collection
-      if (this.mouseJoint) {
-        const heldBody = this.mouseJoint.getBodyB();
-        for (let ce = heldBody.getContactList(); ce; ce = ce.next) {
+      // Check coin collection — any target figure touching a coin collects it
+      const coinsToRemove: Coin[] = [];
+      for (const figure of this.figures) {
+        if (!this.isFigureTarget(figure)) continue;
+        for (let ce = figure.body.getContactList(); ce; ce = ce.next) {
           const contact = ce.contact;
           if (!contact.isTouching()) continue;
-          
           const other = ce.other;
           if (!other) continue;
           const otherData = other.getUserData();
-          
-          if (otherData instanceof Coin) {
-            const figure = heldBody.getUserData() as Figure;
-            const isTarget = figure && 
-                             figure.shape === this.state.targetShape && 
-                             (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
-            
-            if (isTarget) {
-              // Collect coin
-              this.state.timer += Settings.COIN_TIME_BONUS;
-              otherData.destroy(this.world);
-              this.coins = this.coins.filter(c => c !== otherData);
-            }
+          if (otherData instanceof Coin && !coinsToRemove.includes(otherData)) {
+            this.state.timer += Settings.COIN_TIME_BONUS;
+            this.state.coinsCollected++;
+            coinsToRemove.push(otherData);
+          }
+        }
+      }
+      for (const coin of coinsToRemove) {
+        coin.destroy(this.world);
+        this.coins = this.coins.filter(c => c !== coin);
+      }
+
+      // Meteorite spawning
+      if (this.state.level >= Settings.METEORITE_START_LEVEL) {
+        this.meteoriteSpawnTimer -= dt * Settings.GAME_SPEED;
+        if (this.meteoriteSpawnTimer <= 0) {
+          if (this.meteorites.length < Settings.METEORITE_MAX_ON_FIELD) {
+            const margin = 1.5;
+            const x = margin + Math.random() * (this.width - margin * 2);
+            const y = this.height + 3;
+            this.meteorites.push(new Meteorite(this.world, x, y));
+          }
+          this.meteoriteSpawnTimer = Settings.METEORITE_SPAWN_DELAY_MIN +
+            Math.random() * (Settings.METEORITE_SPAWN_DELAY_MAX - Settings.METEORITE_SPAWN_DELAY_MIN);
+        }
+      }
+
+      // Cleanup meteorites that fell below the field
+      for (let i = this.meteorites.length - 1; i >= 0; i--) {
+        const met = this.meteorites[i]!;
+        if (met.body) {
+          const pos = met.body.getPosition();
+          if (pos.y < Settings.METEORITE_DESTROY_Y) {
+            met.destroy(this.world);
+            this.meteorites.splice(i, 1);
           }
         }
       }
@@ -358,12 +395,14 @@ export class AntiTetrisLoop extends PhysicsWorld {
         this.world.destroyBody(this.platformBody);
         this.platformBody = null;
         this.isRefilling = false;
-        
+
         for (const figure of this.figures) {
           if (figure.isNewFigure) {
             figure.setAsRegularFigure();
           }
         }
+        // Re-select target after new figures land
+        this.updateTarget();
       }
     }
 
@@ -402,10 +441,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
         // Actually Planck handles collisions, but we might want to apply DRAG in the top zone.
         if (pos.y > this.height * (1 - Settings.DRAG_ZONE_RATIO) && pos.y <= this.height) {
-          const isTarget = figure.shape === this.state.targetShape && 
-                           (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
-          
-          if (!isTarget) {
+          if (!this.isFigureTarget(figure)) {
             const vel = figure.body.getLinearVelocity();
             if (vel.y > 0) {
               // Apply drag
@@ -415,9 +451,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
         }
         
         // Rigid ceiling for non-targets
-        const isTargetFull = figure.shape === this.state.targetShape && 
-                         (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
-        if (!isTargetFull) {
+        if (!this.isFigureTarget(figure)) {
           const ceiling = this.height + 0.5; // Slight leeway above screen
           if (pos.y > ceiling) {
             const vel = figure.body.getLinearVelocity();
@@ -467,23 +501,15 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
     }
 
-    // White block gravity: double gravity while any white-block figure is on the field
-    const hasWhiteBlockFigure = this.figures.some(f => f.hasWhiteBlock);
-    const currentGravity = this.world.getGravity().y;
-    const targetGravity = hasWhiteBlockFigure ? Settings.HEAVY_GRAVITY : Settings.DEFAULT_GRAVITY;
-    if (currentGravity !== targetGravity && this.state.status === 'PLAYING') {
-      this.world.setGravity(new Vec2(0, targetGravity));
-    }
-
     // Refill check
-    if (!this.isRefilling && this.figures.length <= Settings.MIN_FIGURES_TO_REFILL) {
+    const levelCfg = this.getLevelConfig(this.state.level);
+    if (!this.isRefilling && this.state.status === 'PLAYING' && this.figures.length <= levelCfg.k) {
       this.refill();
     }
   }
 
   private handleFigureThrown(figure: Figure, index: number) {
-    const isTarget = figure.shape === this.state.targetShape && 
-                     (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
+    const isTarget = this.isFigureTarget(figure);
 
     // Remove figure from the world FIRST so updateTarget can't pick it again
     figure.destroy(this.world);
@@ -503,26 +529,20 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private refill() {
     if (this.isRefilling) return;
 
+    const prevLevel = this.state.level;
     this.state.level++;
 
-    // Build per-figure white-block flags for this batch.
-    // Exactly one figure gets a white block once we reach LEVEL_WHITE_BLOCK_START,
-    // ONLY IF there isn't already a white block figure on the field.
-    const hasWhiteBlockFigure = this.figures.some(f => f.hasWhiteBlock);
-    const addWhiteBlock = this.state.level >= Settings.LEVEL_WHITE_BLOCK_START && !hasWhiteBlockFigure;
-    const wbIdx = addWhiteBlock ? Math.floor(Math.random() * Settings.FIGURES_PER_REFILL) : -1;
-    this.whiteBlockQueue = Array.from(
-      { length: Settings.FIGURES_PER_REFILL },
-      (_, i) => i === wbIdx,
-    );
-
-    // Update the target immediately so the new level's color/shape rules apply
-    this.updateTarget();
+    // Compute how many figures to spawn: i(newLevel) − k(prevLevel)
+    const prevCfg = this.getLevelConfig(prevLevel);
+    const nextCfg = this.getLevelConfig(this.state.level);
+    const spawnCount = nextCfg.i - prevCfg.k;
 
     this.isRefilling = true;
-    
-    // Spawn platform
-    const platformY = Settings.PLATFORM_START_Y; // Lower start to give figures room to stack vertically
+
+    // Compute platform start Y so all figures safely spawn below the floor (y = 0).
+    // Each figure spawns at: platformY + OFFSET + i * GAP (angle=0, max height ~2 units).
+    // The topmost figure (i = spawnCount-1) must satisfy: y + GAP < 0.
+    const platformY = -(spawnCount * Settings.PLATFORM_SPAWN_GAP_Y + Settings.PLATFORM_SPAWN_OFFSET_Y + Settings.PLATFORM_MIN_Y_BUFFER);
     this.platformBody = this.world.createBody({
       type: 'kinematic',
       position: new Vec2(0, platformY),
@@ -536,16 +556,18 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
     // Spawn new figures vertically stacked on the platform to avoid overlap
     const playableWidth = this.width - 2;
-    for (let i = 0; i < Settings.FIGURES_PER_REFILL; i++) {
+    for (let i = 0; i < spawnCount; i++) {
        // Random horizontal position, but kept away from edges
        const x = 1.5 + Math.random() * (playableWidth - 1);
        // Stack vertically with enough room to fall and relax
-       const y = platformY + Settings.PLATFORM_SPAWN_OFFSET_Y + i * Settings.PLATFORM_SPAWN_GAP_Y; 
-       const hasWhiteBlock = this.whiteBlockQueue[i] ?? false;
-       const figure = this.spawnFigure(x, y, hasWhiteBlock, true); // true for isNewFigure
-       // Randomize rotation so they fall naturally
-       figure.body.setAngle(Math.random() * Math.PI * 2);
+       const y = platformY + Settings.PLATFORM_SPAWN_OFFSET_Y + i * Settings.PLATFORM_SPAWN_GAP_Y;
+       const figure = this.spawnFigure(x, y, true); // true for isNewFigure
+       // Slight tilt so figures don't stack perfectly flat, but small enough to keep height < 2 units
+       figure.body.setAngle((Math.random() - 0.5) * 0.4);
     }
+
+    // Update target now that all new figures are in this.figures
+    this.updateTarget();
   }
 
   public handleInput(input: any) { // InputState
@@ -661,6 +683,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   public getCoins(): Coin[] {
     return this.coins;
+  }
+
+  public getMeteorites(): Meteorite[] {
+    return this.meteorites;
   }
 
   public getPlatformBody(): any {

@@ -36,6 +36,15 @@ let loop: AntiTetrisLoop;
 let input: InputHandler;
 let rafId: number;
 
+// Text animation queue (level-up, coin collection, etc.)
+interface TextAnimation {
+  startTime: number;
+  text: string;
+  color: string;
+  yRatio: number;
+}
+const textAnimations: TextAnimation[] = [];
+
 const state = reactive<GameState>({
   level: 1,
   timer: Settings.GAME_DURATION,
@@ -45,6 +54,7 @@ const state = reactive<GameState>({
   hintVisible: false,
   status: 'WAITING',
   tutorialActive: false,
+  coinsCollected: 0,
 });
 
 const emit = defineEmits(['update-state']);
@@ -120,13 +130,35 @@ onMounted(() => {
     const inputState = input.getState();
     loop.handleInput(inputState);
     loop.step(time);
-    
+
     // Update local state and emit
     const loopState = loop.getState();
+
+    // Detect level-up and start animation
+    if (loopState.status === 'PLAYING' && loopState.level > state.level) {
+      const colorValues = Object.values(Settings.COLOR_PALETTE);
+      textAnimations.push({
+        startTime: time,
+        text: `${Settings.LEVEL_UP_TEXT_PREFIX} ${loopState.level}`,
+        color: colorValues[Math.floor(Math.random() * colorValues.length)]!,
+        yRatio: Settings.LEVEL_UP_Y_RATIO,
+      });
+    }
+
+    // Detect coin collection and start animation
+    if (loopState.status === 'PLAYING' && loopState.coinsCollected > state.coinsCollected) {
+      textAnimations.push({
+        startTime: time,
+        text: `${Settings.COIN_COLLECT_TEXT} +${Settings.COIN_TIME_BONUS}`,
+        color: Settings.COIN_COLLECT_COLOR,
+        yRatio: Settings.COIN_COLLECT_Y_RATIO,
+      });
+    }
+
     Object.assign(state, loopState);
     emit('update-state', { ...loopState });
 
-    render(ctx, width, height, dynamicScale, dpr);
+    render(ctx, width, height, dynamicScale, dpr, time);
     rafId = requestAnimationFrame(frame);
   };
 
@@ -138,7 +170,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
 });
 
-const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number, scale: number, dpr: number) => {
+const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number, scale: number, dpr: number, time: number) => {
   // Clear the drawing area (CSS pixels)
   ctx.clearRect(0, 0, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
   
@@ -213,20 +245,15 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
     const pos = figure.body.getPosition();
     const angle = figure.body.getAngle();
 
-    // Generate textures: one for figure color, one white texture if needed
     // Texture itself must be rendered at physical pixels (scale * dpr)
     const physicalScale = scale * dpr;
     const tex = generateDynamicBlockTexture(figure.color, angle, Math.round(physicalScale));
-    const whiteTex = figure.hasWhiteBlock
-      ? generateDynamicBlockTexture('white', angle, Math.round(physicalScale))
-      : null;
-    
+
     ctx.save();
     ctx.translate(pos.x * scale, pos.y * scale);
     ctx.rotate(angle);
 
     // Draw fixtures
-    let fixtureIndex = 0;
     for (let f = figure.body.getFixtureList(); f; f = f.getNext()) {
       const shape = f.getShape() as any;
       const verts = shape.m_vertices;
@@ -238,16 +265,92 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
         minY = Math.min(minY, verts[i].y);
       }
 
-      const isWhiteBlock = figure.hasWhiteBlock && fixtureIndex === figure.whiteBlockIndex;
       // Destination size is in CSS pixels because context is already scaled by DPR
-      ctx.drawImage(isWhiteBlock ? whiteTex! : tex, minX * scale, minY * scale, 1 * scale, 1 * scale);
-      fixtureIndex++;
+      ctx.drawImage(tex, minX * scale, minY * scale, 1 * scale, 1 * scale);
     }
     
     ctx.restore();
   }
 
+  // Draw meteorites (white blocks)
+  for (const meteorite of loop.getMeteorites()) {
+    if (!meteorite.body) continue;
+    const mPos = meteorite.body.getPosition();
+    const mAngle = meteorite.body.getAngle();
+
+    const mPhysicalScale = scale * dpr;
+    const mTex = generateDynamicBlockTexture(Settings.METEORITE_COLOR, mAngle, Math.round(mPhysicalScale));
+
+    ctx.save();
+    ctx.translate(mPos.x * scale, mPos.y * scale);
+    ctx.rotate(mAngle);
+
+    for (let f = meteorite.body.getFixtureList(); f; f = f.getNext()) {
+      const shape = f.getShape() as any;
+      const verts = shape.m_vertices;
+
+      let minX = verts[0].x;
+      let minY = verts[0].y;
+      for (let j = 1; j < verts.length; j++) {
+        minX = Math.min(minX, verts[j].x);
+        minY = Math.min(minY, verts[j].y);
+      }
+
+      ctx.drawImage(mTex, minX * scale, minY * scale, 1 * scale, 1 * scale);
+    }
+
+    ctx.restore();
+  }
+
   ctx.restore();
+
+  // ── Effects drawn in normal screen coords (Y-down) ──────────────────────
+  const canvasW = ctx.canvas.width / dpr;
+  const canvasH = ctx.canvas.height / dpr;
+
+  // Text animations (level-up, coin collection, etc.)
+  for (let i = textAnimations.length - 1; i >= 0; i--) {
+    const anim = textAnimations[i]!;
+    const elapsed = (time - anim.startTime) / 1000;
+    const dur = Settings.LEVEL_UP_DURATION_SEC;
+
+    if (elapsed >= dur) {
+      textAnimations.splice(i, 1);
+      continue;
+    }
+
+    const progress = elapsed / dur;
+    const fadeIn  = Settings.LEVEL_UP_FADE_IN_RATIO;
+    const fadeOut = Settings.LEVEL_UP_FADE_OUT_RATIO;
+
+    let alpha: number;
+    let sc: number;
+
+    if (progress < fadeIn) {
+      const p = progress / fadeIn;
+      alpha = p;
+      sc = Settings.LEVEL_UP_SCALE_START + (Settings.LEVEL_UP_SCALE_PEAK - Settings.LEVEL_UP_SCALE_START) * p;
+    } else if (progress > 1 - fadeOut) {
+      const p = (1 - progress) / fadeOut;
+      alpha = p;
+      sc = 1 + (Settings.LEVEL_UP_SCALE_PEAK - 1) * p;
+    } else {
+      alpha = 1;
+      sc = Settings.LEVEL_UP_SCALE_PEAK;
+    }
+
+    const fontSize = Settings.LEVEL_UP_FONT_SIZE_RATIO * scale * Settings.FIELD_WIDTH;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(canvasW * Settings.LEVEL_UP_X_RATIO, canvasH * anim.yRatio);
+    ctx.scale(sc, sc);
+    ctx.font = `bold ${fontSize}px 'Monocraft', monospace`;
+    ctx.fillStyle = anim.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(anim.text, 0, 0);
+    ctx.restore();
+  }
 };
 </script>
 

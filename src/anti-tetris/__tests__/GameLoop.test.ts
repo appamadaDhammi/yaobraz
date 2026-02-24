@@ -26,7 +26,7 @@ describe('AntiTetrisLoop – initialisation', () => {
 
   it('spawns the expected number of initial figures (WAITING state)', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-    expect(loop.getFigures().length).toBe(7);
+    expect(loop.getFigures().length).toBe(Settings.LEVEL_CONFIG[0]!.i);
   });
 
   it('has a valid initial game state', () => {
@@ -46,9 +46,9 @@ describe('AntiTetrisLoop – initialisation', () => {
     expect(loop.getWorld().getGravity().y).toBe(0);
   });
 
-  it('spawns 7 figures during WAITING state initialisation', () => {
+  it('spawns level-1 figure count during WAITING state initialisation', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-    expect(loop.getFigures().length).toBe(7);
+    expect(loop.getFigures().length).toBe(Settings.LEVEL_CONFIG[0]!.i);
   });
 });
 
@@ -172,11 +172,12 @@ describe('AntiTetrisLoop – refill', () => {
     // Manually destroy figures down to the trigger threshold
     const world = loop.getWorld();
     const figures = loop.getFigures();
-    while (figures.length > Settings.MIN_FIGURES_TO_REFILL) {
+    const threshold = Settings.LEVEL_CONFIG[0]!.k;
+    while (figures.length > threshold) {
       const fig = figures.pop()!;
       fig.destroy(world);
     }
-    expect(figures.length).toBe(Settings.MIN_FIGURES_TO_REFILL);
+    expect(figures.length).toBe(threshold);
 
     // Run enough steps so onUpdate fires and triggers a refill
     const fps60 = 1000 / 60;
@@ -189,7 +190,7 @@ describe('AntiTetrisLoop – refill', () => {
 
     // isRefilling should be true (batch not yet complete) -- or already done if
     // physics resolved quickly. Either way, figure count must not go below threshold.
-    expect(loop.getFigures().length).toBeGreaterThanOrEqual(Settings.MIN_FIGURES_TO_REFILL);
+    expect(loop.getFigures().length).toBeGreaterThanOrEqual(threshold);
   });
 
   it('spawns a platform and all new figures at once during refill', () => {
@@ -197,17 +198,19 @@ describe('AntiTetrisLoop – refill', () => {
 
     // Capture figure count before manual refill
     const countBefore = loop.getFigures().length;
+    // Spawn count for level 1→2: i(level2) − k(level1)
+    const spawnCount = Settings.LEVEL_CONFIG[1]!.i - Settings.LEVEL_CONFIG[0]!.k;
 
     // Call refill directly (private method)
     (loop as any).refill();
 
-    // Immediately after: all FIGURES_PER_REFILL figures should have been added, marked as new figures
-    expect(loop.getFigures().length).toBe(countBefore + Settings.FIGURES_PER_REFILL);
+    // Immediately after: all spawned figures should have been added, marked as new figures
+    expect(loop.getFigures().length).toBe(countBefore + spawnCount);
     expect((loop as any).isRefilling).toBe(true);
     expect((loop as any).platformBody).toBeDefined();
 
     // Check that new figures are marked as isNewFigure
-    const newFigures = loop.getFigures().slice(-Settings.FIGURES_PER_REFILL);
+    const newFigures = loop.getFigures().slice(-spawnCount);
     for (const fig of newFigures) {
       expect(fig.isNewFigure).toBe(true);
     }
@@ -216,20 +219,19 @@ describe('AntiTetrisLoop – refill', () => {
   it('does not trigger a second refill if one is already in progress', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
 
-    // Initial figures: 7
     const initialFigureCount = loop.getFigures().length;
+    const spawnCount = Settings.LEVEL_CONFIG[1]!.i - Settings.LEVEL_CONFIG[0]!.k;
 
     // Trigger first refill manually
     (loop as any).refill();
 
-    // After one refill, we should have 7 + 4 = 11 figures
-    expect(loop.getFigures().length).toBe(initialFigureCount + Settings.FIGURES_PER_REFILL);
+    expect(loop.getFigures().length).toBe(initialFigureCount + spawnCount);
 
     // Call refill again while isRefilling is true
     (loop as any).refill();
 
     // The count shouldn't have changed, because of the early return
-    expect(loop.getFigures().length).toBe(initialFigureCount + Settings.FIGURES_PER_REFILL);
+    expect(loop.getFigures().length).toBe(initialFigureCount + spawnCount);
     expect((loop as any).isRefilling).toBe(true);
   });
 
@@ -275,8 +277,9 @@ describe('AntiTetrisLoop – refill', () => {
     expect((loop as any).isRefilling).toBe(false);
     expect(loop.getPlatformBody()).toBeNull();
 
-    // The last FIGURES_PER_REFILL figures should no longer be marked isNewFigure
-    const newFigures = loop.getFigures().slice(-Settings.FIGURES_PER_REFILL);
+    // The last spawned figures should no longer be marked isNewFigure
+    const spawnCount = Settings.LEVEL_CONFIG[1]!.i - Settings.LEVEL_CONFIG[0]!.k;
+    const newFigures = loop.getFigures().slice(-spawnCount);
     for (const fig of newFigures) {
       expect(fig.isNewFigure).toBe(false);
     }
@@ -392,18 +395,18 @@ describe('AntiTetrisLoop – level progression: target color', () => {
     expect(loop.getState().targetColor).toBe('white');
   });
 
-  it('target color is white on levels 2 and 3', () => {
+  it('target color is white on levels below LEVEL_COLOR_START', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
 
-    // Force level 2 by calling refill twice (private method access via cast)
-    (loop as any).refill();
-    expect(loop.getState().level).toBe(2);
-    expect(loop.getState().targetColor).toBe('white');
-    (loop as any).isRefilling = false; // Bypass refill lock
-
-    (loop as any).refill();
-    expect(loop.getState().level).toBe(3);
-    expect(loop.getState().targetColor).toBe('white');
+    // Advance through all levels that should still be white
+    for (let lvl = 1; lvl < Settings.LEVEL_COLOR_START; lvl++) {
+      (loop as any).refill();
+      (loop as any).isRefilling = false; // Bypass refill lock
+      expect(loop.getState().level).toBe(lvl + 1);
+      if (lvl + 1 < Settings.LEVEL_COLOR_START) {
+        expect(loop.getState().targetColor).toBe('white');
+      }
+    }
   });
 
   it('target color is a real color from level 4 onwards', () => {
@@ -421,166 +424,104 @@ describe('AntiTetrisLoop – level progression: target color', () => {
 });
 
 // ---------------------------------------------------------------------------
-// White block mechanic
+// Coins collected counter
 // ---------------------------------------------------------------------------
-describe('AntiTetrisLoop – white block: spawning', () => {
-  /**
-   * Step the physics world until the sequential spawn pipeline has finished
-   * (isRefilling becomes false). Safety cap prevents infinite loops.
-   */
-  function drainSpawnQueue(loop: AntiTetrisLoop) {
-    const fps60 = 1000 / 60;
-    let t = (loop as any).lastTime || 0;
-    for (let i = 0; i < 600 && (loop as any).isRefilling; i++) {
-      t += fps60;
-      loop.step(t);
-    }
-  }
-
-  /** Advance loop to a given level, waiting for each batch to fully land. */
-  function advanceToLevel(loop: AntiTetrisLoop, targetLevel: number) {
-    while (loop.getState().level < targetLevel) {
-      (loop as any).refill();
-      drainSpawnQueue(loop);
-      // Let's destroy all old figures to prevent piling up and deadlocking the spawn pipeline
-      // We keep Settings.MIN_FIGURES_TO_REFILL + 1 to prevent auto-refill triggering
-      const world = loop.getWorld();
-      const figures = loop.getFigures();
-      while (figures.length > Settings.MIN_FIGURES_TO_REFILL + 1) {
-        figures.shift()!.destroy(world);
-      }
-    }
-  }
-
-  /** Start the game (enable gravity) */
-  function startGame(loop: AntiTetrisLoop) {
-    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
-  }
-
-  it('no white block figures before level 8', () => {
+describe('AntiTetrisLoop – coinsCollected counter', () => {
+  it('starts at zero', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-    startGame(loop);
-    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
-
-    const hasAny = loop.getFigures().some(f => f.hasWhiteBlock);
-    expect(hasAny).toBe(false);
-  });
-
-  it('at least one white block figure spawns on refill at level 8', () => {
-    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-    startGame(loop);
-    // Advance to just before the threshold, then trigger the level-8 refill
-    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
-
-    // This refill call bumps level to LEVEL_WHITE_BLOCK_START and should
-    // include exactly one white block figure
-    (loop as any).refill();
-    drainSpawnQueue(loop); // wait for all figures in the batch to land
-    expect(loop.getState().level).toBe(Settings.LEVEL_WHITE_BLOCK_START);
-
-    const whiteBlockFigures = loop.getFigures().filter(f => f.hasWhiteBlock);
-    expect(whiteBlockFigures.length).toBe(1);
-  });
-
-  it('white block figure has a valid whiteBlockIndex', () => {
-    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-    startGame(loop);
-    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
-    (loop as any).refill();
-    drainSpawnQueue(loop);
-
-    const wbFig = loop.getFigures().find(f => f.hasWhiteBlock)!;
-    expect(wbFig).toBeDefined();
-    expect(wbFig.whiteBlockIndex).toBeGreaterThanOrEqual(0);
-
-    // Count fixtures on body (should equal number of blocks in the shape)
-    let fixtureCount = 0;
-    for (let f = wbFig.body.getFixtureList(); f; f = f.getNext()) fixtureCount++;
-    expect(wbFig.whiteBlockIndex).toBeLessThan(fixtureCount);
+    expect(loop.getState().coinsCollected).toBe(0);
   });
 });
 
-
-describe('AntiTetrisLoop – white block: gravity doubling', () => {
-  function drainSpawnQueue(loop: AntiTetrisLoop) {
-    const fps60 = 1000 / 60;
-    let t = (loop as any).lastTime || 0;
-    for (let i = 0; i < 600 && (loop as any).isRefilling; i++) {
-      t += fps60;
-      loop.step(t);
-    }
-  }
-
-  function advanceToLevel(loop: AntiTetrisLoop, targetLevel: number) {
-    while (loop.getState().level < targetLevel) {
-      (loop as any).refill();
-      drainSpawnQueue(loop);
-      // Let's destroy all figures to prevent piling up and deadlocking the spawn pipeline
-      const world = loop.getWorld();
-      const figures = loop.getFigures();
-      while (figures.length > 0) {
-        figures.pop()!.destroy(world);
-      }
-    }
-  }
-
-  it('gravity doubles to HEAVY_GRAVITY when a white-block figure is on field', () => {
+// ---------------------------------------------------------------------------
+// Meteorite mechanic
+// ---------------------------------------------------------------------------
+describe('AntiTetrisLoop – meteorite mechanic', () => {
+  it('does not spawn meteorites before METEORITE_START_LEVEL', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-
-    // Start the game so gravity is active
     loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
-    expect(loop.getState().status).toBe('PLAYING');
 
-    // Advance to level 8 so a white block is present
-    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
-    (loop as any).refill(); // triggers level 8 refill with white block
-    drainSpawnQueue(loop); // wait for all figures including white-block to land
+    // Force timer to expire so a meteorite would spawn if allowed
+    (loop as any).meteoriteSpawnTimer = 0;
 
-    const hasWB = loop.getFigures().some(f => f.hasWhiteBlock);
-    expect(hasWB).toBe(true);
-
-    // Run a couple of steps so onUpdate picks up the white block
     const fps60 = 1000 / 60;
-    for (let i = 0; i < 5; i++) loop.step(i * fps60);
+    for (let i = 0; i < 10; i++) {
+      loop.step(i * fps60);
+    }
 
-    expect(loop.getWorld().getGravity().y).toBe(Settings.HEAVY_GRAVITY);
+    expect(loop.getMeteorites().length).toBe(0);
   });
 
-  it('gravity returns to DEFAULT_GRAVITY when all white-block figures are removed', () => {
+  it('spawns meteorites after reaching METEORITE_START_LEVEL', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
-
     loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
-    advanceToLevel(loop, Settings.LEVEL_WHITE_BLOCK_START - 1);
-    (loop as any).refill();
-    drainSpawnQueue(loop);
 
-    // Run a step to let onUpdate apply heavy gravity
-    const fps60 = 1000 / 60;
-    // We must pass a large enough 't' so physics steps actually run
-    let targetTime = (loop as any).lastTime + 5 * fps60;
-    loop.step(targetTime);
-    expect(loop.getWorld().getGravity().y).toBe(Settings.HEAVY_GRAVITY);
-
-    // Spawn a dummy regular figure so dropping the white block doesn't trigger a refill
-    (loop as any).spawnFigure(FIELD_W / 2, FIELD_H / 2, false, false);
-
-    // Destroy all white-block figures
-    const world = loop.getWorld();
-    const figures = loop.getFigures();
-    for (let i = figures.length - 1; i >= 0; i--) {
-      if (figures[i]!.hasWhiteBlock) {
-        figures[i]!.destroy(world);
-        figures.splice(i, 1);
-      }
+    // Fast-forward to meteorite level
+    for (let lvl = 1; lvl < Settings.METEORITE_START_LEVEL; lvl++) {
+      (loop as any).refill();
+      (loop as any).isRefilling = false;
     }
-    expect(loop.getFigures().some(f => f.hasWhiteBlock)).toBe(false);
+    expect(loop.getState().level).toBeGreaterThanOrEqual(Settings.METEORITE_START_LEVEL);
 
-    // Step again so onUpdate detects no white block and restores gravity
-    targetTime += 5 * fps60;
-    loop.step(targetTime);
+    // Force the spawn timer to expire
+    (loop as any).meteoriteSpawnTimer = 0;
 
-    expect(loop.getWorld().getGravity().y).toBe(Settings.DEFAULT_GRAVITY);
+    // step(1) initialises lastTime; step(1+fps60) runs onUpdate
+    const fps60 = 1000 / 60;
+    loop.step(1);
+    loop.step(1 + fps60);
+
+    expect(loop.getMeteorites().length).toBe(1);
+  });
+
+  it('removes meteorites that fall below METEORITE_DESTROY_Y', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+
+    // Fast-forward to meteorite level and spawn one
+    for (let lvl = 1; lvl < Settings.METEORITE_START_LEVEL; lvl++) {
+      (loop as any).refill();
+      (loop as any).isRefilling = false;
+    }
+    (loop as any).meteoriteSpawnTimer = 0;
+    const fps60 = 1000 / 60;
+    loop.step(1);
+    loop.step(1 + fps60);
+
+    const meteorites = loop.getMeteorites();
+    expect(meteorites.length).toBe(1);
+
+    // Teleport the meteorite below destroy threshold
+    meteorites[0]!.body.setPosition({ x: FIELD_W / 2, y: Settings.METEORITE_DESTROY_Y - 1 });
+
+    // Step to trigger cleanup
+    loop.step(1 + 2 * fps60);
+
+    expect(loop.getMeteorites().length).toBe(0);
+  });
+
+  it('respects max meteorites on field', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+
+    // Fast-forward to meteorite level
+    for (let lvl = 1; lvl < Settings.METEORITE_START_LEVEL; lvl++) {
+      (loop as any).refill();
+      (loop as any).isRefilling = false;
+    }
+
+    // Force-spawn one meteorite
+    (loop as any).meteoriteSpawnTimer = 0;
+    const fps60 = 1000 / 60;
+    loop.step(1);
+    loop.step(1 + fps60);
+    expect(loop.getMeteorites().length).toBe(1);
+
+    // Try to spawn another
+    (loop as any).meteoriteSpawnTimer = 0;
+    loop.step(1 + 2 * fps60);
+
+    // Should still be 1 (max on field = 1)
+    expect(loop.getMeteorites().length).toBe(1);
   });
 });
-
-

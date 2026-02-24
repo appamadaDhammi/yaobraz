@@ -15,8 +15,8 @@
       <div class="Stat Stat--next">
         <label class="Stat__label">фигура:</label>
         <div class="TargetBox">
-          <div 
-            class="TargetBox__figure" 
+          <div
+            class="TargetBox__figure"
             :class="{ 'is-white': targetColor === 'white' }"
             :style="{ color: targetColor === 'white' ? '#fff' : Settings.TEXTURE_COLORS[targetColor as FigureColor] }"
             v-html="getFigureIcon(targetShape)"
@@ -60,17 +60,23 @@ const progressWidth = computed(() => {
   return 100 - Math.min(100, Math.max(0, (elapsed / Settings.GAME_DURATION) * 100));
 });
 
+/** Block positions matching the header SVG orientation (10-unit grid). */
+const HEADER_BLOCKS: Record<FigureShape, { vb: string; cells: [number, number][] }> = {
+  I: { vb: '0 0 40 10', cells: [[0,0], [10,0], [20,0], [30,0]] },
+  O: { vb: '0 0 20 20', cells: [[0,0], [10,0], [0,10], [10,10]] },
+  T: { vb: '0 0 30 20', cells: [[0,0], [10,0], [20,0], [10,10]] },
+  S: { vb: '0 0 30 20', cells: [[10,0], [20,0], [0,10], [10,10]] },
+  Z: { vb: '0 0 30 20', cells: [[0,0], [10,0], [10,10], [20,10]] },
+  L: { vb: '0 0 30 20', cells: [[0,10], [10,10], [20,10], [20,0]] },
+  J: { vb: '0 0 30 20', cells: [[0,0], [0,10], [10,10], [20,10]] },
+};
+
 const getFigureIcon = (shape: FigureShape) => {
-  const icons: Record<FigureShape, string> = {
-    I: '<svg viewBox="0 0 40 10"><rect width="40" height="10" fill="currentColor"/></svg>',
-    O: '<svg viewBox="0 0 20 20"><rect width="20" height="20" fill="currentColor"/></svg>',
-    T: '<svg viewBox="0 0 30 20"><path d="M0,0 h30 v10 h-10 v10 h-10 v-10 h-10 z" fill="currentColor"/></svg>',
-    S: '<svg viewBox="0 0 30 20"><path d="M10,0 h20 v10 h-10 v10 h-20 v-10 h10 z" fill="currentColor"/></svg>',
-    Z: '<svg viewBox="0 0 30 20"><path d="M0,0 h20 v10 h10 v10 h-20 v-10 h-10 z" fill="currentColor"/></svg>',
-    L: '<svg viewBox="0 0 30 20"><path d="M0,10 h20 v-10 h10 v20 h-30 z" fill="currentColor"/></svg>',
-    J: '<svg viewBox="0 0 30 20"><path d="M0,0 h10 v10 h20 v10 h-30 z" fill="currentColor"/></svg>',
-  };
-  return icons[shape];
+  const { vb, cells } = HEADER_BLOCKS[shape];
+  const rects = cells.map(([x, y]) =>
+    `<rect x="${x}" y="${y}" width="10" height="10" fill="currentColor"/>`,
+  ).join('');
+  return `<svg viewBox="${vb}">${rects}</svg>`;
 };
 </script>
 
