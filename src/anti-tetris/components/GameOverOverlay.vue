@@ -1,5 +1,5 @@
 <template>
-  <div class="GameOver">
+  <div class="GameOver" ref="containerRef">
     <div class="GameOver__scaler" :style="{ transform: `scale(${scale})` }">
       <div class="GameOver__content">
         <h1 class="GameOver__title">ИГРА ОКОНЧЕНА</h1>
@@ -37,13 +37,18 @@ defineEmits(['restart']);
 
 const qrUrl = ref('');
 const scale = ref(1);
+const containerRef = ref<HTMLElement | null>(null);
+let resizeObserver: ResizeObserver | null = null;
 
 const updateScale = () => {
-  const maxW = 600;
-  const maxH = 950;
+  if (!containerRef.value) return;
+  const rect = containerRef.value.getBoundingClientRect();
   
-  const scaleW = (window.innerWidth * 0.9) / maxW;
-  const scaleH = (window.innerHeight * 0.95) / maxH;
+  const maxW = 600;
+  const maxH = 1050; // Adjusted max height to slightly exceed bounding box just in case
+  
+  const scaleW = (rect.width * 0.9) / maxW;
+  const scaleH = (rect.height * 0.95) / maxH;
   
   scale.value = Math.min(1, scaleW, scaleH);
 };
@@ -64,10 +69,19 @@ onMounted(() => {
   qrUrl.value = `${TELEGRAM_BOT_LINK}?start=${payload}`;
 
   updateScale();
+  if (containerRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      updateScale();
+    });
+    resizeObserver.observe(containerRef.value);
+  }
   window.addEventListener('resize', updateScale);
 });
 
 onUnmounted(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
   window.removeEventListener('resize', updateScale);
 });
 </script>
