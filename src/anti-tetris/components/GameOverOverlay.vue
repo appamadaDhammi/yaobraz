@@ -1,29 +1,31 @@
 <template>
   <div class="GameOver">
-    <div class="GameOver__content">
-      <h1 class="GameOver__title">ИГРА ОКОНЧЕНА</h1>
-      
-      <div class="GameOver__stats">
-        <div class="Stat">
-          <span class="Stat__label">уровень:</span>
-          <span class="Stat__value">{{ level }}</span>
+    <div class="GameOver__scaler" :style="{ transform: `scale(${scale})` }">
+      <div class="GameOver__content">
+        <h1 class="GameOver__title">ИГРА ОКОНЧЕНА</h1>
+        
+        <div class="GameOver__stats">
+          <div class="Stat">
+            <span class="Stat__label">уровень:</span>
+            <span class="Stat__value">{{ level }}</span>
+          </div>
         </div>
-      </div>
 
-      <div class="GameOver__qr" v-if="qrUrl">
-        <div class="QrContainer">
-          <QrcodeVue :value="qrUrl" :size="530" level="H" background="#00000000" foreground="#F4EB8C" />
+        <div class="GameOver__qr" v-if="qrUrl">
+          <div class="QrContainer">
+            <QrcodeVue :value="qrUrl" :size="530" level="H" background="#00000000" foreground="#F4EB8C" />
+          </div>
+          <div class="QrHint">отсканируй, чтобы получить приз</div>
         </div>
-        <div class="QrHint">отсканируй, чтобы получить приз</div>
-      </div>
 
-      <button class="GameOver__btn" @click="$emit('restart')">ИГРАТЬ СНОВА</button>
+        <button class="GameOver__btn" @click="$emit('restart')">ИГРАТЬ СНОВА</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import QrcodeVue from 'qrcode.vue';
 import { TELEGRAM_BOT_LINK } from '../Settings';
 
@@ -34,6 +36,17 @@ const props = defineProps<{
 defineEmits(['restart']);
 
 const qrUrl = ref('');
+const scale = ref(1);
+
+const updateScale = () => {
+  const maxW = 600;
+  const maxH = 950;
+  
+  const scaleW = (window.innerWidth * 0.9) / maxW;
+  const scaleH = (window.innerHeight * 0.95) / maxH;
+  
+  scale.value = Math.min(1, scaleW, scaleH);
+};
 
 onMounted(() => {
   let idCounter = parseInt(localStorage.getItem('ya_edu_anti_tetris_id') || '1', 10);
@@ -49,6 +62,13 @@ onMounted(() => {
   localStorage.setItem('ya_edu_anti_tetris_id', idCounter.toString());
   
   qrUrl.value = `${TELEGRAM_BOT_LINK}?start=${payload}`;
+
+  updateScale();
+  window.addEventListener('resize', updateScale);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateScale);
 });
 </script>
 
@@ -69,14 +89,20 @@ onMounted(() => {
   color: #fff;
 }
 
+.GameOver__scaler {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center;
+}
+
 .GameOver__content {
   text-align: center;
   animation: fadeIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 90%;
-  max-width: 600px;
+  width: 600px;
 }
 
 .GameOver__title {
