@@ -30,7 +30,6 @@ export class Figure {
   public body: any; // planck.Body
   public shape: FigureShape;
   public color: FigureColor;
-  public hasCoin: boolean = false;
   /** Whether this figure carries a "white block" that doubles gravity */
   public hasWhiteBlock: boolean = false;
   /** Which fixture index (0-based) is the white block */
@@ -38,10 +37,9 @@ export class Figure {
   /** Whether this figure is newly spawned and passes through the regular floor */
   public isNewFigure: boolean = false;
   
-  constructor(world: World, shape: FigureShape, color: FigureColor, x: number, y: number, hasCoin: boolean = false, hasWhiteBlock: boolean = false, isNewFigure: boolean = false) {
+  constructor(world: World, shape: FigureShape, color: FigureColor, x: number, y: number, hasWhiteBlock: boolean = false, isNewFigure: boolean = false) {
     this.shape = shape;
     this.color = color;
-    this.hasCoin = hasCoin;
     this.hasWhiteBlock = hasWhiteBlock;
     this.isNewFigure = isNewFigure;
     if (hasWhiteBlock) {

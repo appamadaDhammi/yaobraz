@@ -1,6 +1,7 @@
 import { Vec2, Box, MouseJoint, type MouseJointDef } from 'planck';
 import { PhysicsWorld } from '../core/PhysicsWorld';
 import { Figure } from './Figure';
+import { Coin } from './Coin';
 import * as Settings from './Settings';
 
 export interface GameState {
@@ -16,6 +17,8 @@ export interface GameState {
 
 export class AntiTetrisLoop extends PhysicsWorld {
   private figures: Figure[] = [];
+  private coins: Coin[] = [];
+  private coinSpawnTimer: number = 0;
   private state: GameState;
   private width: number;
   private height: number;
@@ -46,6 +49,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
       status: 'WAITING',
       tutorialActive: false,
     };
+
+    this.coinSpawnTimer = Settings.COIN_SPAWN_DELAY_MIN + Math.random() * (Settings.COIN_SPAWN_DELAY_MAX - Settings.COIN_SPAWN_DELAY_MIN);
 
     this.setupWalls();
     this.setupContactListener();
@@ -241,9 +246,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     const x = customX !== undefined ? customX : Math.random() * (this.width - 4) + 2;
     const y = customY !== undefined ? customY : this.height + Math.random() * 5;
     
-    const hasCoin = Math.random() < .5;
-
-    const figure = new Figure(this.world, shape!, color!, x, y, hasCoin, hasWhiteBlock, isNewFigure);
+    const figure = new Figure(this.world, shape!, color!, x, y, hasWhiteBlock, isNewFigure);
     this.figures.push(figure);
     return figure;
   }
@@ -288,6 +291,56 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
 
     if (this.state.isGameOver) return;
+
+    // Coin logic
+    if (this.state.status === 'PLAYING') {
+      const dt = 1 / 60;
+      this.coinSpawnTimer -= dt * Settings.GAME_SPEED;
+      if (this.coinSpawnTimer <= 0) {
+        if (this.coins.length < Settings.COIN_MAX_ON_FIELD) {
+          // Spawn new coin in the upper area of the field randomly AND aligned to the 1x1 grid
+          // width is 9, playable X is roughly 1..8
+          // height is roughly 13 (or varies by screen), spawn near top
+          const gridX = Math.floor(1 + Math.random() * (this.width - 2)); 
+          const gridY = Math.floor(this.height - 1 - Math.random() * 3);
+          // Center the coin in the cell
+          this.coins.push(new Coin(this.world, gridX + 0.5, gridY + 0.5));
+        }
+        this.coinSpawnTimer = Settings.COIN_SPAWN_DELAY_MIN + Math.random() * (Settings.COIN_SPAWN_DELAY_MAX - Settings.COIN_SPAWN_DELAY_MIN);
+      }
+
+      // Update coin lifetime
+      for (let i = this.coins.length - 1; i >= 0; i--) {
+        const coin = this.coins[i];
+        if (coin) {
+          coin.lifetime -= dt * Settings.GAME_SPEED;
+          if (coin.lifetime <= 0) {
+            coin.destroy(this.world);
+            this.coins.splice(i, 1);
+          }
+        }
+      }
+
+      // Check coin collection
+      if (this.mouseJoint) {
+        const heldBody = this.mouseJoint.getBodyB();
+        for (let ce = heldBody.getContactList(); ce; ce = ce.next) {
+          const contact = ce.contact;
+          if (!contact.isTouching()) continue;
+          
+          const other = ce.other;
+          if (!other) continue;
+          const otherData = other.getUserData();
+          
+          if (otherData instanceof Coin) {
+            // Collect coin
+            this.state.timer += Settings.COIN_TIME_BONUS;
+            otherData.destroy(this.world);
+            this.coins = this.coins.filter(c => c !== otherData);
+          }
+        }
+      }
+    }
 
     this.checkAndSpawnNext();
 
@@ -430,9 +483,6 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.figures.splice(index, 1);
 
     if (isTarget) {
-      if (figure.hasCoin) {
-        this.state.timer += Settings.COIN_TIME_BONUS;
-      }
       this.state.hintVisible = false;
       this.updateTarget();
     }
@@ -598,6 +648,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   public getFigures(): Figure[] {
     return this.figures;
+  }
+
+  public getCoins(): Coin[] {
+    return this.coins;
   }
 
   public getPlatformBody(): any {

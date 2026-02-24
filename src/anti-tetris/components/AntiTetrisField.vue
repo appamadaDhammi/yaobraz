@@ -1,6 +1,7 @@
 <template>
   <div class="GameField" ref="container" @pointerdown="handlePointerDown">
     <canvas ref="canvas"></canvas>
+    <video ref="coinVideo" :src="coinWebm" autoplay loop muted playsinline style="position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px;"></video>
     
     <div v-if="state.status === 'WAITING'" class="StartOverlay">
       <div class="StartOverlay__content">
@@ -25,9 +26,11 @@ import type { GameState } from '../GameLoop';
 import { InputHandler } from '../../core/InputHandler';
 import * as Settings from '../Settings';
 import { generateDynamicBlockTexture } from '../BlockTexture';
+import coinWebm from '../assets/coin.webm';
 
 const container = ref<HTMLElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
+const coinVideo = ref<HTMLVideoElement | null>(null);
 
 let loop: AntiTetrisLoop;
 let input: InputHandler;
@@ -107,6 +110,10 @@ onMounted(() => {
   // Scale context to use CSS pixels for drawing
   ctx.scale(dpr, dpr);
   
+  if (coinVideo.value) {
+    coinVideo.value.play().catch(console.error);
+  }
+  
   window.addEventListener('resize', handleResize);
 
   const frame = (time: number) => {
@@ -166,6 +173,40 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
       ctx.stroke();
     }
     ctx.restore();
+  }
+
+  // Draw coins
+  const coins = loop.getCoins();
+  if (coins.length > 0 && coinVideo.value && coinVideo.value.readyState >= 2) {
+    for (const coin of coins) {
+      if (coin.lifetime <= 0) continue; // Skip destroying coins
+
+      const pos = coin.body.getPosition();
+      const radius = Settings.COIN_RADIUS * 1.2;
+      const diameter = radius * 2;
+      
+      ctx.save();
+      // Fade out logic before destroying
+      if (coin.lifetime < 1.0) {
+        ctx.globalAlpha = coin.lifetime;
+      }
+
+      ctx.globalCompositeOperation = 'screen';
+
+      ctx.translate(pos.x * scale, pos.y * scale);
+      // un-flip Y so the video isn't upside down because of `ctx.scale(1, -1)` at the start
+      ctx.scale(1, -1);
+      
+      ctx.drawImage(
+        coinVideo.value, 
+        -radius * scale, 
+        -radius * scale, 
+        diameter * scale, 
+        diameter * scale
+      );
+      
+      ctx.restore();
+    }
   }
 
   for (const figure of loop.getFigures()) {
