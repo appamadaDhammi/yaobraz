@@ -506,8 +506,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.state.level++;
 
     // Build per-figure white-block flags for this batch.
-    // Exactly one figure gets a white block once we reach LEVEL_WHITE_BLOCK_START.
-    const addWhiteBlock = this.state.level >= Settings.LEVEL_WHITE_BLOCK_START;
+    // Exactly one figure gets a white block once we reach LEVEL_WHITE_BLOCK_START,
+    // ONLY IF there isn't already a white block figure on the field.
+    const hasWhiteBlockFigure = this.figures.some(f => f.hasWhiteBlock);
+    const addWhiteBlock = this.state.level >= Settings.LEVEL_WHITE_BLOCK_START && !hasWhiteBlockFigure;
     const wbIdx = addWhiteBlock ? Math.floor(Math.random() * Settings.FIGURES_PER_REFILL) : -1;
     this.whiteBlockQueue = Array.from(
       { length: Settings.FIGURES_PER_REFILL },
