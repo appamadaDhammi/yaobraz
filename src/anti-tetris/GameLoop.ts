@@ -108,15 +108,18 @@ export class AntiTetrisLoop extends PhysicsWorld {
       filterCategoryBits: Settings.COLLISION_CATEGORY.FLOOR,
       filterMaskBits: Settings.COLLISION_MASK.FLOOR,
     });
+    // Add deep walls so tumbling figures don't fall off the platform below y=0
+    const wallDepth = 50; 
+    
     // Left wall
     this.ground.createFixture({
-      shape: new Box(10, this.height, new Vec2(-10, this.height)),
+      shape: new Box(10, this.height + wallDepth, new Vec2(-10, this.height - wallDepth)),
       filterCategoryBits: Settings.COLLISION_CATEGORY.WALL,
       filterMaskBits: Settings.COLLISION_MASK.WALL,
     });
     // Right wall
     this.ground.createFixture({
-      shape: new Box(10, this.height, new Vec2(this.width + 10, this.height)),
+      shape: new Box(10, this.height + wallDepth, new Vec2(this.width + 10, this.height - wallDepth)),
       filterCategoryBits: Settings.COLLISION_CATEGORY.WALL,
       filterMaskBits: Settings.COLLISION_MASK.WALL,
     });
@@ -329,7 +332,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
           }
 
           // OOB SAFEGUARD: Figure fell through floor or escaped walls
-          if (pos.y < -20 || pos.x < -this.width || pos.x > this.width * 2) {
+          if (pos.y < -40 || pos.x < -this.width || pos.x > this.width * 2) {
             figure.destroy(this.world);
             this.figures.splice(i, 1);
             continue;
@@ -338,17 +341,38 @@ export class AntiTetrisLoop extends PhysicsWorld {
         // Blocking logic: figure is moving up but hindered by others?
 
         // Actually Planck handles collisions, but we might want to apply DRAG in the top zone.
-          if (pos.y > this.height * (1 - Settings.DRAG_ZONE_RATIO) && pos.y <= this.height) {
-            const isTarget = figure.shape === this.state.targetShape && 
-                             (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
-            
-            if (!isTarget) {
-              const vel = figure.body.getLinearVelocity();
-              if (vel.y > 0) {
-                figure.body.setLinearVelocity(new Vec2(vel.x, vel.y * Settings.WRONG_FIGURE_DRAG));
-              }
+        if (pos.y > this.height * (1 - Settings.DRAG_ZONE_RATIO) && pos.y <= this.height) {
+          const isTarget = figure.shape === this.state.targetShape && 
+                           (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
+          
+          if (!isTarget) {
+            const vel = figure.body.getLinearVelocity();
+            if (vel.y > 0) {
+              // Apply drag
+              figure.body.setLinearVelocity(new Vec2(vel.x, vel.y * Settings.WRONG_FIGURE_DRAG));
             }
           }
+        }
+        
+        // Rigid ceiling for non-targets
+        const isTargetFull = figure.shape === this.state.targetShape && 
+                         (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
+        if (!isTargetFull) {
+          const ceiling = this.height + 0.5; // Slight leeway above screen
+          if (pos.y > ceiling) {
+            const vel = figure.body.getLinearVelocity();
+            if (vel.y > 0) {
+               // Bounce back down and snap position below ceiling
+               figure.body.setPosition(new Vec2(pos.x, ceiling));
+               figure.body.setLinearVelocity(new Vec2(vel.x, -Math.abs(vel.y) * 0.5));
+            }
+            if (this.mouseJoint && this.mouseJoint.getBodyB() === figure.body) {
+                // Break drag immediately
+                this.world.destroyJoint(this.mouseJoint);
+                this.mouseJoint = null;
+            }
+          }
+        }
         }
       }
     }
@@ -439,7 +463,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.isRefilling = true;
     
     // Spawn platform
-    const platformY = -15; // Starting below the regular floor
+    const platformY = -25; // Lower start to give figures room to stack vertically
     this.platformBody = this.world.createBody({
       type: 'kinematic',
       position: new Vec2(0, platformY),
@@ -449,17 +473,19 @@ export class AntiTetrisLoop extends PhysicsWorld {
       filterCategoryBits: Settings.COLLISION_CATEGORY.PLATFORM,
       filterMaskBits: Settings.COLLISION_MASK.PLATFORM,
     });
-    this.platformBody.setLinearVelocity(new Vec2(0, 5)); // Move upwards
+    this.platformBody.setLinearVelocity(new Vec2(0, 8)); // Move upwards faster to compensate
 
-    // Spawn new figures side-by-side on the platform
+    // Spawn new figures vertically stacked on the platform to avoid overlap
     const playableWidth = this.width - 2;
-    const startX = 1;
-    const spacing = playableWidth / Settings.FIGURES_PER_REFILL;
     for (let i = 0; i < Settings.FIGURES_PER_REFILL; i++) {
-       const x = startX + (i + 0.5) * spacing;
-       const y = platformY + 2; 
+       // Random horizontal position, but kept away from edges
+       const x = 1.5 + Math.random() * (playableWidth - 1);
+       // Stack vertically with enough room to fall and relax
+       const y = platformY + 2 + i * 4; 
        const hasWhiteBlock = this.whiteBlockQueue[i] ?? false;
-       this.spawnFigure(x, y, hasWhiteBlock, true); // true for isNewFigure
+       const figure = this.spawnFigure(x, y, hasWhiteBlock, true); // true for isNewFigure
+       // Randomize rotation so they fall naturally
+       figure.body.setAngle(Math.random() * Math.PI * 2);
     }
   }
 
@@ -474,6 +500,9 @@ export class AntiTetrisLoop extends PhysicsWorld {
         for (const fig of this.figures) {
           fig.body.setAngularVelocity((Math.random() - 0.5) * 5);
         }
+        // if (typeof document !== 'undefined' && document.body.requestFullscreen) {
+        //   document.body.requestFullscreen().catch(() => {});
+        // }
       }
       return;
     }
