@@ -351,19 +351,14 @@ describe('AntiTetrisLoop – OOB safeguards', () => {
     const figures = loop.getFigures();
     const firstFigure = figures[0]!;
     
-    console.log('Test OOB Before TP: y =', firstFigure.body.getPosition().y);
     // Teleport figure below floor
     firstFigure.body.setLinearVelocity({ x: 0, y: 0 });
     firstFigure.body.setPosition({ x: FIELD_W / 2, y: -45 });
-    console.log('Test OOB After TP: y =', firstFigure.body.getPosition().y);
     
     // Step to trigger onUpdate (OOB check)
     // We need to run at least one step that updates the accumulator and calls onUpdate
     loop.step(100 * fps60);
     
-    console.log('Test OOB After Step: count =', loop.getFigures().length, 'contains?', loop.getFigures().includes(firstFigure));
-    console.log('Test OOB After Step pos y =', firstFigure.body.getPosition().y);
-
     expect(loop.getFigures()).not.toContain(firstFigure);
   });
 
