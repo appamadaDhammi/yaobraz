@@ -1,5 +1,5 @@
 /** Длительность раунда в секундах */
-export const GAME_DURATION = 45;
+export const GAME_DURATION = 60;
 
 /** Множитель скорости игры (влияет на всё) */
 export const GAME_SPEED = 1.0;
@@ -169,3 +169,22 @@ export const COLLISION_MASK = {
   NEW_FIGURE: COLLISION_CATEGORY.WALL | COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.PLATFORM,
   PLATFORM: COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.WALL,
 };
+
+/** Начальная Y-позиция появляющейся платформы (ниже экрана) */
+export const PLATFORM_START_Y = -8;
+
+/** Скорость подъема платформы */
+export const PLATFORM_SPEED = 4;
+
+/** Отступ по Y для первой фигуры на платформе */
+export const PLATFORM_SPAWN_OFFSET_Y = 2;
+
+/** Вертикальный зазор между фигурами на платформе */
+export const PLATFORM_SPAWN_GAP_Y = 1;
+
+/** Цвет заливки платформы */
+export const PLATFORM_FILL_STYLE = 'rgba(148, 135, 223, 0.3)';
+
+/** Цвет обводки платформы */
+export const PLATFORM_STROKE_STYLE = '#9487DF';
+

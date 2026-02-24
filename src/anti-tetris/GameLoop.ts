@@ -463,7 +463,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     this.isRefilling = true;
     
     // Spawn platform
-    const platformY = -25; // Lower start to give figures room to stack vertically
+    const platformY = Settings.PLATFORM_START_Y; // Lower start to give figures room to stack vertically
     this.platformBody = this.world.createBody({
       type: 'kinematic',
       position: new Vec2(0, platformY),
@@ -473,7 +473,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
       filterCategoryBits: Settings.COLLISION_CATEGORY.PLATFORM,
       filterMaskBits: Settings.COLLISION_MASK.PLATFORM,
     });
-    this.platformBody.setLinearVelocity(new Vec2(0, 8)); // Move upwards faster to compensate
+    this.platformBody.setLinearVelocity(new Vec2(0, Settings.PLATFORM_SPEED)); // Move upwards faster to compensate
 
     // Spawn new figures vertically stacked on the platform to avoid overlap
     const playableWidth = this.width - 2;
@@ -481,7 +481,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
        // Random horizontal position, but kept away from edges
        const x = 1.5 + Math.random() * (playableWidth - 1);
        // Stack vertically with enough room to fall and relax
-       const y = platformY + 2 + i * 4; 
+       const y = platformY + Settings.PLATFORM_SPAWN_OFFSET_Y + i * Settings.PLATFORM_SPAWN_GAP_Y; 
        const hasWhiteBlock = this.whiteBlockQueue[i] ?? false;
        const figure = this.spawnFigure(x, y, hasWhiteBlock, true); // true for isNewFigure
        // Randomize rotation so they fall naturally

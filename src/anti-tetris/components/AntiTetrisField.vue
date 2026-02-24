@@ -148,8 +148,8 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
     const pos = platformBody.getPosition();
     ctx.save();
     ctx.translate(pos.x * scale, pos.y * scale);
-    ctx.fillStyle = 'rgba(148, 135, 223, 0.3)';
-    ctx.strokeStyle = '#9487DF';
+    ctx.fillStyle = Settings.PLATFORM_FILL_STYLE;
+    ctx.strokeStyle = Settings.PLATFORM_STROKE_STYLE;
     ctx.lineWidth = 2 * (scale / 30); // scale stroke based on dynamic scale
     
     for (let f = platformBody.getFixtureList(); f; f = f.getNext()) {
