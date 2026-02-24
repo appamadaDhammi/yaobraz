@@ -105,6 +105,32 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
   ctx.translate(0, ctx.canvas.height / dpr);
   ctx.scale(1, -1);
 
+  // Draw platform if exists
+  const platformBody = loop.getPlatformBody();
+  if (platformBody) {
+    const pos = platformBody.getPosition();
+    ctx.save();
+    ctx.translate(pos.x * scale, pos.y * scale);
+    ctx.fillStyle = 'rgba(148, 135, 223, 0.3)';
+    ctx.strokeStyle = '#9487DF';
+    ctx.lineWidth = 2 * (scale / 30); // scale stroke based on dynamic scale
+    
+    for (let f = platformBody.getFixtureList(); f; f = f.getNext()) {
+      const shape = f.getShape() as any;
+      const verts = shape.m_vertices;
+      
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x * scale, verts[0].y * scale);
+      for (let i = 1; i < verts.length; i++) {
+        ctx.lineTo(verts[i].x * scale, verts[i].y * scale);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   for (const figure of loop.getFigures()) {
     const pos = figure.body.getPosition();
     const angle = figure.body.getAngle();

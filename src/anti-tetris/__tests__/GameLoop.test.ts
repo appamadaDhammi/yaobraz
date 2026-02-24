@@ -163,7 +163,7 @@ describe('AntiTetrisLoop – input handling', () => {
 });
 
 describe('AntiTetrisLoop – refill', () => {
-  it('refills figures sequentially when count drops below threshold', () => {
+  it('refills figures when count drops below threshold', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
 
     // Transition to PLAYING so refill is active
@@ -192,7 +192,7 @@ describe('AntiTetrisLoop – refill', () => {
     expect(loop.getFigures().length).toBeGreaterThanOrEqual(Settings.MIN_FIGURES_TO_REFILL);
   });
 
-  it('spawns figures one at a time during refill (not all at once)', () => {
+  it('spawns a platform and all new figures at once during refill', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
 
     // Capture figure count before manual refill
@@ -201,11 +201,85 @@ describe('AntiTetrisLoop – refill', () => {
     // Call refill directly (private method)
     (loop as any).refill();
 
-    // Immediately after: only the FIRST figure of the batch should have been
-    // added (the rest are queued, waiting for the first collision).
-    expect(loop.getFigures().length).toBe(countBefore + 1);
+    // Immediately after: all FIGURES_PER_REFILL figures should have been added, marked as new figures
+    expect(loop.getFigures().length).toBe(countBefore + Settings.FIGURES_PER_REFILL);
     expect((loop as any).isRefilling).toBe(true);
-    expect((loop as any).spawnsLeft).toBe(Settings.FIGURES_PER_REFILL - 1);
+    expect((loop as any).platformBody).toBeDefined();
+
+    // Check that new figures are marked as isNewFigure
+    const newFigures = loop.getFigures().slice(-Settings.FIGURES_PER_REFILL);
+    for (const fig of newFigures) {
+      expect(fig.isNewFigure).toBe(true);
+    }
+  });
+
+  it('does not trigger a second refill if one is already in progress', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+
+    // Initial figures: 7
+    const initialFigureCount = loop.getFigures().length;
+
+    // Trigger first refill manually
+    (loop as any).refill();
+
+    // After one refill, we should have 7 + 4 = 11 figures
+    expect(loop.getFigures().length).toBe(initialFigureCount + Settings.FIGURES_PER_REFILL);
+
+    // Call refill again while isRefilling is true
+    (loop as any).refill();
+
+    // The count shouldn't have changed, because of the early return
+    expect(loop.getFigures().length).toBe(initialFigureCount + Settings.FIGURES_PER_REFILL);
+    expect((loop as any).isRefilling).toBe(true);
+  });
+
+  it('exposes platformBody via getPlatformBody()', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    
+    expect(loop.getPlatformBody()).toBeNull();
+    
+    (loop as any).refill();
+    
+    expect(loop.getPlatformBody()).toBeDefined();
+    expect(loop.getPlatformBody()).not.toBeNull();
+  });
+
+  it('converts new figures to regular figures when platform reaches floor level', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    
+    // Start the game so gravity and onUpdate mechanics run properly
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+
+    (loop as any).refill();
+    expect((loop as any).isRefilling).toBe(true);
+
+    const platformBody = loop.getPlatformBody();
+    expect(platformBody).not.toBeNull();
+    
+    // Move platform just below floor
+    platformBody.setPosition({ x: 0, y: -0.1 });
+    
+    // Step loop once to trigger onUpdate and apply physics
+    loop.step(1000 / 60);
+
+    // It should still be refilling
+    expect((loop as any).isRefilling).toBe(true);
+
+    // Now move platform exactly to / slightly above floor level (0)
+    platformBody.setPosition({ x: 0, y: 0.1 });
+    
+    // Step to trigger onUpdate
+    loop.step(1000 / 60 + 1000 / 60); // enough time passed to run onUpdate
+
+    // Refilling should be complete
+    expect((loop as any).isRefilling).toBe(false);
+    expect(loop.getPlatformBody()).toBeNull();
+
+    // The last FIGURES_PER_REFILL figures should no longer be marked isNewFigure
+    const newFigures = loop.getFigures().slice(-Settings.FIGURES_PER_REFILL);
+    for (const fig of newFigures) {
+      expect(fig.isNewFigure).toBe(false);
+    }
   });
 });
 
@@ -278,7 +352,7 @@ describe('AntiTetrisLoop – OOB safeguards', () => {
     const firstFigure = figures[0]!;
     
     // Teleport figure below floor
-    firstFigure.body.setPosition({ x: FIELD_W / 2, y: -10 });
+    firstFigure.body.setPosition({ x: FIELD_W / 2, y: -21 });
     
     // Step to trigger onUpdate (OOB check)
     // We need to run at least one step that updates the accumulator and calls onUpdate
@@ -324,6 +398,7 @@ describe('AntiTetrisLoop – level progression: target color', () => {
     (loop as any).refill();
     expect(loop.getState().level).toBe(2);
     expect(loop.getState().targetColor).toBe('white');
+    (loop as any).isRefilling = false; // Bypass refill lock
 
     (loop as any).refill();
     expect(loop.getState().level).toBe(3);
@@ -336,6 +411,7 @@ describe('AntiTetrisLoop – level progression: target color', () => {
     // Fast-forward to level 4
     for (let lvl = 1; lvl < Settings.LEVEL_COLOR_START; lvl++) {
       (loop as any).refill();
+      (loop as any).isRefilling = false; // Bypass refill lock
     }
     expect(loop.getState().level).toBe(Settings.LEVEL_COLOR_START);
     // targetColor must now be a real figure color, not 'white'
@@ -365,7 +441,7 @@ describe('AntiTetrisLoop – white block: spawning', () => {
     while (loop.getState().level < targetLevel) {
       (loop as any).refill();
       drainSpawnQueue(loop);
-      // Let's destroy all figures to prevent piling up and deadlocking the spawn pipeline
+      // Let's destroy all old figures to prevent piling up and deadlocking the spawn pipeline
       // We keep Settings.MIN_FIGURES_TO_REFILL + 1 to prevent auto-refill triggering
       const world = loop.getWorld();
       const figures = loop.getFigures();
@@ -479,8 +555,13 @@ describe('AntiTetrisLoop – white block: gravity doubling', () => {
 
     // Run a step to let onUpdate apply heavy gravity
     const fps60 = 1000 / 60;
-    for (let i = 0; i < 5; i++) loop.step(i * fps60);
+    // We must pass a large enough 't' so physics steps actually run
+    let targetTime = (loop as any).lastTime + 5 * fps60;
+    loop.step(targetTime);
     expect(loop.getWorld().getGravity().y).toBe(Settings.HEAVY_GRAVITY);
+
+    // Spawn a dummy regular figure so dropping the white block doesn't trigger a refill
+    (loop as any).spawnFigure(FIELD_W / 2, FIELD_H / 2, false, false);
 
     // Destroy all white-block figures
     const world = loop.getWorld();
@@ -494,8 +575,8 @@ describe('AntiTetrisLoop – white block: gravity doubling', () => {
     expect(loop.getFigures().some(f => f.hasWhiteBlock)).toBe(false);
 
     // Step again so onUpdate detects no white block and restores gravity
-    const base = 5 * fps60;
-    for (let i = 0; i < 5; i++) loop.step(base + i * fps60);
+    targetTime += 5 * fps60;
+    loop.step(targetTime);
 
     expect(loop.getWorld().getGravity().y).toBe(Settings.DEFAULT_GRAVITY);
   });

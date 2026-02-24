@@ -27,6 +27,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private spawnsLeft: number = 0;
   private whiteBlockQueue: boolean[] = [];
   private lastSpawnedFigure: Figure | null = null;
+  private platformBody: any = null;
 
   constructor(width: number, height: number, isSlowInit: boolean = false, initialTimer?: number) {
     super(new Vec2(0, Settings.DEFAULT_GRAVITY));
@@ -95,18 +96,30 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   /** True while a sequential spawn chain is active (init OR refill). */
   private get isSequentiallySpawning(): boolean {
-    return this.isInitializing || this.isRefilling;
+    return this.isInitializing;
   }
 
   private setupWalls() {
     this.ground = this.world.createBody();
     this.ground.setUserData('wall');
     // Simple thick floor — real tunneling prevention is in onPostStep()
-    this.ground.createFixture(new Box(this.width / 2, 10, new Vec2(this.width / 2, -10)), 0);
+    this.ground.createFixture({
+      shape: new Box(this.width / 2, 10, new Vec2(this.width / 2, -10)),
+      filterCategoryBits: Settings.COLLISION_CATEGORY.FLOOR,
+      filterMaskBits: Settings.COLLISION_MASK.FLOOR,
+    });
     // Left wall
-    this.ground.createFixture(new Box(10, this.height, new Vec2(-10, this.height)), 0);
+    this.ground.createFixture({
+      shape: new Box(10, this.height, new Vec2(-10, this.height)),
+      filterCategoryBits: Settings.COLLISION_CATEGORY.WALL,
+      filterMaskBits: Settings.COLLISION_MASK.WALL,
+    });
     // Right wall
-    this.ground.createFixture(new Box(10, this.height, new Vec2(this.width + 10, this.height)), 0);
+    this.ground.createFixture({
+      shape: new Box(10, this.height, new Vec2(this.width + 10, this.height)),
+      filterCategoryBits: Settings.COLLISION_CATEGORY.WALL,
+      filterMaskBits: Settings.COLLISION_MASK.WALL,
+    });
   }
 
   /**
@@ -216,14 +229,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
       if (this.isInitializing) {
         this.isInitializing = false;
       }
-      if (this.isRefilling) {
-        this.isRefilling = false;
-        this.updateTarget();
-      }
     }
   }
 
-  private spawnFigure(customX?: number, customY?: number, hasWhiteBlock: boolean = false): Figure {
+  private spawnFigure(customX?: number, customY?: number, hasWhiteBlock: boolean = false, isNewFigure: boolean = false): Figure {
     const shape = Settings.FIGURE_SHAPES[Math.floor(Math.random() * Settings.FIGURE_SHAPES.length)];
     const color = Settings.FIGURE_COLORS[Math.floor(Math.random() * Settings.FIGURE_COLORS.length)];
     const x = customX !== undefined ? customX : Math.random() * (this.width - 4) + 2;
@@ -231,7 +240,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     
     const hasCoin = Math.random() < .5;
 
-    const figure = new Figure(this.world, shape!, color!, x, y, hasCoin, hasWhiteBlock);
+    const figure = new Figure(this.world, shape!, color!, x, y, hasCoin, hasWhiteBlock, isNewFigure);
     this.figures.push(figure);
     return figure;
   }
@@ -279,6 +288,22 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
     this.checkAndSpawnNext();
 
+    if (this.isRefilling && this.platformBody) {
+      const pos = this.platformBody.getPosition();
+      if (pos.y >= 0) {
+        // Platform reached the floor level
+        this.world.destroyBody(this.platformBody);
+        this.platformBody = null;
+        this.isRefilling = false;
+        
+        for (const figure of this.figures) {
+          if (figure.isNewFigure) {
+            figure.setAsRegularFigure();
+          }
+        }
+      }
+    }
+
     // Update timer
     if (this.state.status === 'PLAYING') {
       this.state.timer -= (1 / 60) * Settings.GAME_SPEED; // Assuming 60fps, scale with GAME_SPEED
@@ -304,7 +329,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
           }
 
           // OOB SAFEGUARD: Figure fell through floor or escaped walls
-          if (pos.y < -5 || pos.x < -this.width || pos.x > this.width * 2) {
+          if (pos.y < -20 || pos.x < -this.width || pos.x > this.width * 2) {
             figure.destroy(this.world);
             this.figures.splice(i, 1);
             continue;
@@ -367,7 +392,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
 
     // Refill check
-    if (this.figures.length <= Settings.MIN_FIGURES_TO_REFILL) {
+    if (!this.isRefilling && this.figures.length <= Settings.MIN_FIGURES_TO_REFILL) {
       this.refill();
     }
   }
@@ -395,6 +420,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   private refill() {
+    if (this.isRefilling) return;
+
     this.state.level++;
 
     // Build per-figure white-block flags for this batch.
@@ -407,14 +434,33 @@ export class AntiTetrisLoop extends PhysicsWorld {
     );
 
     // Update the target immediately so the new level's color/shape rules apply
-    // even before the batch has physically landed. A second call happens once
-    // the last figure settles (in spawnNextSequential) to pick from fresh arrivals.
     this.updateTarget();
 
-    // Kick off the sequential drop pipeline.
-    this.spawnsLeft = Settings.FIGURES_PER_REFILL;
     this.isRefilling = true;
-    this.spawnNextSequential();
+    
+    // Spawn platform
+    const platformY = -15; // Starting below the regular floor
+    this.platformBody = this.world.createBody({
+      type: 'kinematic',
+      position: new Vec2(0, platformY),
+    });
+    this.platformBody.createFixture({
+      shape: new Box(this.width / 2, 1, new Vec2(this.width / 2, -1)),
+      filterCategoryBits: Settings.COLLISION_CATEGORY.PLATFORM,
+      filterMaskBits: Settings.COLLISION_MASK.PLATFORM,
+    });
+    this.platformBody.setLinearVelocity(new Vec2(0, 5)); // Move upwards
+
+    // Spawn new figures side-by-side on the platform
+    const playableWidth = this.width - 2;
+    const startX = 1;
+    const spacing = playableWidth / Settings.FIGURES_PER_REFILL;
+    for (let i = 0; i < Settings.FIGURES_PER_REFILL; i++) {
+       const x = startX + (i + 0.5) * spacing;
+       const y = platformY + 2; 
+       const hasWhiteBlock = this.whiteBlockQueue[i] ?? false;
+       this.spawnFigure(x, y, hasWhiteBlock, true); // true for isNewFigure
+    }
   }
 
   public handleInput(input: any) { // InputState
@@ -523,5 +569,9 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
   public getFigures(): Figure[] {
     return this.figures;
+  }
+
+  public getPlatformBody(): any {
+    return this.platformBody;
   }
 }

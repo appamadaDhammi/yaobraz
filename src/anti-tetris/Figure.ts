@@ -35,12 +35,15 @@ export class Figure {
   public hasWhiteBlock: boolean = false;
   /** Which fixture index (0-based) is the white block */
   public whiteBlockIndex: number = -1;
+  /** Whether this figure is newly spawned and passes through the regular floor */
+  public isNewFigure: boolean = false;
   
-  constructor(world: World, shape: FigureShape, color: FigureColor, x: number, y: number, hasCoin: boolean = false, hasWhiteBlock: boolean = false) {
+  constructor(world: World, shape: FigureShape, color: FigureColor, x: number, y: number, hasCoin: boolean = false, hasWhiteBlock: boolean = false, isNewFigure: boolean = false) {
     this.shape = shape;
     this.color = color;
     this.hasCoin = hasCoin;
     this.hasWhiteBlock = hasWhiteBlock;
+    this.isNewFigure = isNewFigure;
     if (hasWhiteBlock) {
       this.whiteBlockIndex = WHITE_BLOCK_INDEX[shape];
     }
@@ -72,6 +75,8 @@ export class Figure {
         density: 1.0,
         friction: Settings.FIGURE_FRICTION,
         restitution: Settings.FIGURE_RESTITUTION,
+        filterCategoryBits: isNewFigure ? Settings.COLLISION_CATEGORY.NEW_FIGURE : Settings.COLLISION_CATEGORY.FIGURE,
+        filterMaskBits: isNewFigure ? Settings.COLLISION_MASK.NEW_FIGURE : Settings.COLLISION_MASK.FIGURE,
       };
       this.body.createFixture(fixtureDef);
     }
@@ -81,6 +86,17 @@ export class Figure {
 
   public destroy(world: World) {
     world.destroyBody(this.body);
+  }
+
+  public setAsRegularFigure() {
+    this.isNewFigure = false;
+    for (let f = this.body.getFixtureList(); f; f = f.getNext()) {
+      f.setFilterData({
+        categoryBits: Settings.COLLISION_CATEGORY.FIGURE,
+        maskBits: Settings.COLLISION_MASK.FIGURE,
+        groupIndex: 0
+      });
+    }
   }
 
   private smoothedPressure: number = 0;
