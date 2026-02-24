@@ -87,10 +87,10 @@ const getFigureIcon = (shape: FigureShape) => {
 .HeaderContent {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 2fr 1fr;
   align-items: stretch;
   justify-content: space-between;
-  padding: 0.6cqw 4.5%;
+  padding: .6cqh 4.5%;
 }
 
 .Stat {
@@ -98,13 +98,12 @@ const getFigureIcon = (shape: FigureShape) => {
   flex-direction: column;
   justify-content: center;
   gap: 12px;
-  padding-bottom: 16px;
 }
 
 .Stat__label {
   color: #C2B9FA;
   font-family: 'Monocraft', monospace;
-  font-size: 2.8cqw;
+  font-size: 3.6cqw;
   font-weight: 400;
   letter-spacing: 0.05em;
   line-height: 1;
@@ -113,7 +112,7 @@ const getFigureIcon = (shape: FigureShape) => {
 .Stat__value {
   color: #F6C578;
   font-family: 'Monocraft', monospace;
-  font-size: 5.5cqw;
+  font-size: 6.5cqw;
   font-weight: 400;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -122,7 +121,7 @@ const getFigureIcon = (shape: FigureShape) => {
 .Stat--level {
   flex: 0 0 auto;
   min-width: 18%;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .Stat--time {
@@ -133,7 +132,7 @@ const getFigureIcon = (shape: FigureShape) => {
 
 .Stat--next {
   flex: 0 0 auto;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .TargetBox {
@@ -141,6 +140,7 @@ const getFigureIcon = (shape: FigureShape) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 6.5cqw;
 }
 
 .TargetBox__figure {
@@ -151,7 +151,7 @@ const getFigureIcon = (shape: FigureShape) => {
   justify-content: center;
   position: relative;
   right: 0;
-  top: 16px;
+  /*top: 16px;*/
 }
 
 .TargetBox__figure :deep(svg) {

@@ -1,5 +1,5 @@
 /** Длительность раунда в секундах */
-export const GAME_DURATION = 60;
+export const GAME_DURATION = 45;
 
 /** Множитель скорости игры (влияет на всё) */
 export const GAME_SPEED = 1.0;
