@@ -603,4 +603,57 @@ export class AntiTetrisLoop extends PhysicsWorld {
   public getPlatformBody(): any {
     return this.platformBody;
   }
+
+  public resize(newWidth: number, newHeight: number) {
+    if (newWidth === this.width && newHeight === this.height) return;
+
+    const scaleY = newHeight / this.height;
+    
+    this.width = newWidth;
+    this.height = newHeight;
+
+    // Rescale all figures y positions
+    for (const figure of this.figures) {
+      if (figure && figure.body) {
+        const pos = figure.body.getPosition();
+        figure.body.setPosition(new Vec2(pos.x, pos.y * scaleY));
+      }
+    }
+
+    // Rescale platform body
+    if (this.platformBody) {
+      const pos = this.platformBody.getPosition();
+      this.platformBody.setPosition(new Vec2(pos.x, pos.y * scaleY));
+    }
+
+    // Recreate walls for new dimensions
+    if (this.ground) {
+      let f = this.ground.getFixtureList();
+      while (f) {
+        const nextFixture = f.getNext();
+        this.ground.destroyFixture(f);
+        f = nextFixture;
+      }
+
+      this.ground.createFixture({
+        shape: new Box(this.width / 2, 10, new Vec2(this.width / 2, -10)),
+        filterCategoryBits: Settings.COLLISION_CATEGORY.FLOOR,
+        filterMaskBits: Settings.COLLISION_MASK.FLOOR,
+      });
+      
+      const wallDepth = 50; 
+      
+      this.ground.createFixture({
+        shape: new Box(10, this.height + wallDepth, new Vec2(-10, this.height - wallDepth)),
+        filterCategoryBits: Settings.COLLISION_CATEGORY.WALL,
+        filterMaskBits: Settings.COLLISION_MASK.WALL,
+      });
+      
+      this.ground.createFixture({
+        shape: new Box(10, this.height + wallDepth, new Vec2(this.width + 10, this.height - wallDepth)),
+        filterCategoryBits: Settings.COLLISION_CATEGORY.WALL,
+        filterMaskBits: Settings.COLLISION_MASK.WALL,
+      });
+    }
+  }
 }

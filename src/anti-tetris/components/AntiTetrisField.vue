@@ -1,5 +1,5 @@
 <template>
-  <div class="GameField" ref="container">
+  <div class="GameField" ref="container" @pointerdown="handlePointerDown">
     <canvas ref="canvas"></canvas>
     
     <div v-if="state.status === 'WAITING'" class="StartOverlay">
@@ -46,14 +46,48 @@ const state = reactive<GameState>({
 
 const emit = defineEmits(['update-state']);
 
+  let dynamicScale = 1;
+  let height = 0;
+
+  const handlePointerDown = () => {
+    if (state.status === 'WAITING' && window.location.hash.includes('fullscreen-on-start')) {
+      if (typeof document !== 'undefined' && document.body.requestFullscreen && !document.fullscreenElement) {
+        document.body.requestFullscreen();
+      }
+    }
+  };
+
+  const handleResize = () => {
+    if (!canvas.value || !container.value || !loop || !input) return;
+    const rect = container.value.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const width = Settings.FIELD_WIDTH;
+    
+    dynamicScale = rect.width / width;
+    height = rect.height / dynamicScale;
+
+    canvas.value.style.width = `${rect.width}px`;
+    canvas.value.style.height = `${rect.height}px`;
+    canvas.value.width = Math.floor(rect.width * dpr);
+    canvas.value.height = Math.floor(rect.height * dpr);
+
+    const ctx = canvas.value.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+    }
+
+    input.setScale(dynamicScale);
+    loop.resize(width, height);
+  };
+
 onMounted(() => {
   if (!canvas.value || !container.value) return;
 
   const rect = container.value.getBoundingClientRect();
   const width = Settings.FIELD_WIDTH;
   const dpr = window.devicePixelRatio || 1;
-  const dynamicScale = rect.width / width;
-  const height = rect.height / dynamicScale;
+  dynamicScale = rect.width / width;
+  height = rect.height / dynamicScale;
 
   // Set display size
   canvas.value.style.width = `${rect.width}px`;
@@ -72,6 +106,8 @@ onMounted(() => {
 
   // Scale context to use CSS pixels for drawing
   ctx.scale(dpr, dpr);
+  
+  window.addEventListener('resize', handleResize);
 
   const frame = (time: number) => {
     const inputState = input.getState();
@@ -92,6 +128,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   cancelAnimationFrame(rafId);
+  window.removeEventListener('resize', handleResize);
 });
 
 const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number, scale: number, dpr: number) => {

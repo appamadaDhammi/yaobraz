@@ -24,6 +24,10 @@ export class InputHandler {
     this.setupListeners();
   }
 
+  public setScale(scale: number) {
+    this.scale = scale;
+  }
+
   private setupListeners() {
     // Prevent default browser touch actions (scrolling, zooming)
     this.element.style.touchAction = 'none';
