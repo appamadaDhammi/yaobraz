@@ -333,10 +333,17 @@ export class AntiTetrisLoop extends PhysicsWorld {
           const otherData = other.getUserData();
           
           if (otherData instanceof Coin) {
-            // Collect coin
-            this.state.timer += Settings.COIN_TIME_BONUS;
-            otherData.destroy(this.world);
-            this.coins = this.coins.filter(c => c !== otherData);
+            const figure = heldBody.getUserData() as Figure;
+            const isTarget = figure && 
+                             figure.shape === this.state.targetShape && 
+                             (this.state.targetColor === 'white' || figure.color === this.state.targetColor);
+            
+            if (isTarget) {
+              // Collect coin
+              this.state.timer += Settings.COIN_TIME_BONUS;
+              otherData.destroy(this.world);
+              this.coins = this.coins.filter(c => c !== otherData);
+            }
           }
         }
       }
