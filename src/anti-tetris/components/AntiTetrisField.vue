@@ -1,7 +1,6 @@
 <template>
   <div class="GameField" ref="container" @pointerdown="handlePointerDown">
     <canvas ref="canvas"></canvas>
-    <video ref="coinVideo" :src="coinWebm" autoplay loop muted playsinline style="position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px;"></video>
     
     <div v-if="state.status === 'WAITING'" class="StartOverlay">
       <div class="StartOverlay__content">
@@ -26,11 +25,14 @@ import type { GameState } from '../GameLoop';
 import { InputHandler } from '../../core/InputHandler';
 import * as Settings from '../Settings';
 import { generateDynamicBlockTexture } from '../BlockTexture';
-import coinWebm from '../assets/coin.webm';
+import coinSpriteUrl from '../assets/coin-sprite.png';
 
 const container = ref<HTMLElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
-const coinVideo = ref<HTMLVideoElement | null>(null);
+
+// Coin sprite sheet
+let coinSprite: HTMLImageElement | null = null;
+let coinSpriteLoaded = false;
 
 let loop: AntiTetrisLoop;
 let input: InputHandler;
@@ -123,11 +125,15 @@ onMounted(() => {
   // Scale context to use CSS pixels for drawing
   ctx.scale(dpr, dpr);
   
-  if (coinVideo.value) {
-    coinVideo.value.play().catch(console.error);
-  }
-  
+  // Load coin sprite sheet
+  coinSprite = new Image();
+  coinSprite.onload = () => { coinSpriteLoaded = true; };
+  coinSprite.src = coinSpriteUrl;
+
   window.addEventListener('resize', handleResize);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleResize);
+  }
 
   const frame = (time: number) => {
     const inputState = input.getState();
@@ -175,6 +181,9 @@ onMounted(() => {
 onUnmounted(() => {
   cancelAnimationFrame(rafId);
   window.removeEventListener('resize', handleResize);
+  if (window.visualViewport) {
+    window.visualViewport.removeEventListener('resize', handleResize);
+  }
 });
 
 const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight: number, scale: number, dpr: number, time: number) => {
@@ -214,18 +223,22 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
     ctx.restore();
   }
 
-  // Draw coins
+  // Draw coins (sprite sheet animation)
   const coins = loop.getCoins();
-  if (coins.length > 0 && coinVideo.value && coinVideo.value.readyState >= 2) {
+  if (coins.length > 0 && coinSprite && coinSpriteLoaded) {
+    const frameSize = Settings.COIN_SPRITE_FRAME_SIZE;
+    const totalFrames = Settings.COIN_SPRITE_FRAMES;
+    const currentFrame = Math.floor((time / 1000) * Settings.COIN_SPRITE_FPS) % totalFrames;
+    const srcX = currentFrame * frameSize;
+
     for (const coin of coins) {
-      if (coin.lifetime <= 0) continue; // Skip destroying coins
+      if (coin.lifetime <= 0) continue;
 
       const pos = coin.body.getPosition();
       const radius = Settings.COIN_RADIUS * 1.2;
       const diameter = radius * 2;
-      
+
       ctx.save();
-      // Fade out logic before destroying
       if (coin.lifetime < 1.0) {
         ctx.globalAlpha = coin.lifetime;
       }
@@ -233,17 +246,18 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
       ctx.globalCompositeOperation = 'screen';
 
       ctx.translate(pos.x * scale, pos.y * scale);
-      // un-flip Y so the video isn't upside down because of `ctx.scale(1, -1)` at the start
+      // un-flip Y so the sprite isn't upside down
       ctx.scale(1, -1);
-      
+
       ctx.drawImage(
-        coinVideo.value, 
-        -radius * scale, 
-        -radius * scale, 
-        diameter * scale, 
+        coinSprite,
+        srcX, 0, frameSize, frameSize,
+        -radius * scale,
+        -radius * scale,
+        diameter * scale,
         diameter * scale
       );
-      
+
       ctx.restore();
     }
   }
@@ -401,7 +415,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  gap: 3cqw;
   pointer-events: none;
   color: #9487DF;
   opacity: 0.8;
@@ -413,18 +427,18 @@ canvas {
 }
 
 .Hint__arrow {
-  font-size: 6.5rem;
+  font-size: 13cqw;
   animation: bounce 1.5s infinite ease-in-out;
 }
 
 .Hint__text {
   display: flex;
-  gap: 1rem;
+  gap: 2cqw;
 }
 
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-15px); }
+  50% { transform: translateY(-3cqw); }
 }
 
 .StartOverlay {
@@ -450,7 +464,7 @@ canvas {
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 4rem;
+  padding: 8cqw;
   background: rgba(148, 135, 223, 0.5);
   border: 4px solid #9487DF;
   border-width: 1px 0 1px 0;

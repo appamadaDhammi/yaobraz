@@ -17,7 +17,7 @@
 }
 
 .FooterDivider {
-  height: 10px;
+  height: 0.6cqh;
   width: 100%;
   background-color: #F2EB98;
 }

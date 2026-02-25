@@ -76,7 +76,7 @@ const getFigureIcon = (shape: FigureShape) => {
   const rects = cells.map(([x, y]) =>
     `<rect x="${x}" y="${y}" width="10" height="10" fill="currentColor"/>`,
   ).join('');
-  return `<svg viewBox="${vb}">${rects}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="100%" height="100%">${rects}</svg>`;
 };
 </script>
 
@@ -87,7 +87,7 @@ const getFigureIcon = (shape: FigureShape) => {
   display: flex;
   flex-direction: column;
   background: transparent;
-  padding-right: 12px;
+  padding-right: 1.3cqw;
 }
 
 .HeaderContent {
@@ -103,7 +103,7 @@ const getFigureIcon = (shape: FigureShape) => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: 1.3cqw;
 }
 
 .Stat__label {

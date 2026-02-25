@@ -101,6 +101,8 @@ onUnmounted(() => {
   z-index: 100;
   font-family: 'Monocraft', monospace;
   color: #fff;
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 .GameOver__scaler {

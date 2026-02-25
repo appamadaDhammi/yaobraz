@@ -61,11 +61,14 @@ const restartGame = () => {
 .AntiTetris {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #111; /* Dark background outside the game box */
+  background-color: #111;
   overflow: hidden;
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 .GameLayout {
@@ -74,6 +77,7 @@ const restartGame = () => {
   width: 100%;
   height: 100%;
   max-width: calc(100vh * 9 / 16);
+  max-width: calc(100dvh * 9 / 16);
   max-height: calc(100vw * 16 / 9);
   aspect-ratio: 9 / 16;
   background-color: #000;

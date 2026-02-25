@@ -55,6 +55,15 @@ export const COIN_START_LEVEL = 2;
 /** Радиус монеты (в игровых единицах) */
 export const COIN_RADIUS = 0.5;
 
+/** Количество кадров в спрайт-полоске монеты */
+export const COIN_SPRITE_FRAMES = 36;
+
+/** Размер одного кадра спрайта монеты (пиксели) */
+export const COIN_SPRITE_FRAME_SIZE = 128;
+
+/** FPS анимации монеты */
+export const COIN_SPRITE_FPS = 12;
+
 /** Палитра цветов фигур (теперь ключи текстур) */
 export const FIGURE_COLORS = [
   'blue',
