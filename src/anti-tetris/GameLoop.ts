@@ -566,8 +566,6 @@ export class AntiTetrisLoop extends PhysicsWorld {
        figure.body.setAngle((Math.random() - 0.5) * 0.4);
     }
 
-    // Update target now that all new figures are in this.figures
-    this.updateTarget();
   }
 
   public handleInput(input: any) { // InputState

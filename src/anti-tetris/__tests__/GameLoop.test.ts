@@ -409,7 +409,7 @@ describe('AntiTetrisLoop – level progression: target color', () => {
     }
   });
 
-  it('target color is a real color from level 4 onwards', () => {
+  it('target color is a real color from level 4 onwards when updateTarget is called', () => {
     const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
 
     // Fast-forward to level 4
@@ -418,8 +418,35 @@ describe('AntiTetrisLoop – level progression: target color', () => {
       (loop as any).isRefilling = false; // Bypass refill lock
     }
     expect(loop.getState().level).toBe(Settings.LEVEL_COLOR_START);
+
+    // Simulate what happens when the target figure is thrown (updateTarget called)
+    (loop as any).updateTarget();
     // targetColor must now be a real figure color, not 'white'
     expect(Settings.FIGURE_COLORS).toContain(loop.getState().targetColor as any);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Target persistence on level-up
+// ---------------------------------------------------------------------------
+describe('AntiTetrisLoop – target persistence on level-up', () => {
+  it('does not change target when refilling (level-up)', () => {
+    const loop = new AntiTetrisLoop(FIELD_W, FIELD_H, false);
+    // Start the game
+    loop.handleInput({ isPressed: true, x: FIELD_W / 2, y: FIELD_H / 2 });
+
+    const before = { ...loop.getState() };
+    const targetShape = before.targetShape;
+    const targetColor = before.targetColor;
+
+    // Trigger refill (level-up) without bypassing refill lock
+    (loop as any).refill();
+    (loop as any).isRefilling = false;
+
+    const after = loop.getState();
+    expect(after.targetShape).toBe(targetShape);
+    expect(after.targetColor).toBe(targetColor);
+    expect(after.level).toBe(before.level + 1);
   });
 });
 

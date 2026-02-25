@@ -42,6 +42,8 @@ interface TextAnimation {
   text: string;
   color: string;
   yRatio: number;
+  flyTargetX?: number;
+  flyTargetY?: number;
 }
 const textAnimations: TextAnimation[] = [];
 
@@ -142,6 +144,8 @@ onMounted(() => {
         text: `${Settings.LEVEL_UP_TEXT_PREFIX} ${loopState.level}`,
         color: colorValues[Math.floor(Math.random() * colorValues.length)]!,
         yRatio: Settings.LEVEL_UP_Y_RATIO,
+        flyTargetX: Settings.LEVEL_UP_FLY_TARGET_X,
+        flyTargetY: Settings.LEVEL_UP_FLY_TARGET_Y,
       });
     }
 
@@ -152,6 +156,8 @@ onMounted(() => {
         text: `${Settings.COIN_COLLECT_TEXT} +${Settings.COIN_TIME_BONUS}`,
         color: Settings.COIN_COLLECT_COLOR,
         yRatio: Settings.COIN_COLLECT_Y_RATIO,
+        flyTargetX: Settings.COIN_FLY_TARGET_X,
+        flyTargetY: Settings.COIN_FLY_TARGET_Y,
       });
     }
 
@@ -331,18 +337,37 @@ const render = (ctx: CanvasRenderingContext2D, _worldWidth: number, _worldHeight
       alpha = p;
       sc = Settings.LEVEL_UP_SCALE_START + (Settings.LEVEL_UP_SCALE_PEAK - Settings.LEVEL_UP_SCALE_START) * p;
     } else if (progress > 1 - fadeOut) {
-      const p = (1 - progress) / fadeOut;
+      const p = (1 - progress) / fadeOut; // 1→0 as animation ends
       alpha = p;
-      sc = 1 + (Settings.LEVEL_UP_SCALE_PEAK - 1) * p;
+      if (anim.flyTargetX != null && anim.flyTargetY != null) {
+        const flyP = 1 - p; // 0→1 as animation ends
+        const eased = flyP * flyP; // ease-in acceleration
+        sc = Settings.LEVEL_UP_SCALE_PEAK + (Settings.FLY_SCALE_END - Settings.LEVEL_UP_SCALE_PEAK) * eased;
+      } else {
+        sc = 1 + (Settings.LEVEL_UP_SCALE_PEAK - 1) * p;
+      }
     } else {
       alpha = 1;
       sc = Settings.LEVEL_UP_SCALE_PEAK;
     }
 
+    // Compute position — fly toward target during fade-out
+    let posX = canvasW * Settings.LEVEL_UP_X_RATIO;
+    let posY = canvasH * anim.yRatio;
+    if (anim.flyTargetX != null && anim.flyTargetY != null && progress > 1 - fadeOut) {
+      const p = (1 - progress) / fadeOut;
+      const flyP = 1 - p;
+      const eased = flyP * flyP;
+      const endX = canvasW * anim.flyTargetX;
+      const endY = canvasH * anim.flyTargetY;
+      posX += (endX - posX) * eased;
+      posY += (endY - posY) * eased;
+    }
+
     const fontSize = Settings.LEVEL_UP_FONT_SIZE_RATIO * scale * Settings.FIELD_WIDTH;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(canvasW * Settings.LEVEL_UP_X_RATIO, canvasH * anim.yRatio);
+    ctx.translate(posX, posY);
     ctx.scale(sc, sc);
     ctx.font = `bold ${fontSize}px 'Monocraft', monospace`;
     ctx.fillStyle = anim.color;
