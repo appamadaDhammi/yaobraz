@@ -1,11 +1,11 @@
 /** Длительность раунда в секундах */
-export const GAME_DURATION = 100;
+export const GAME_DURATION = 45;
 
 /** Множитель скорости игры (влияет на всё) */
 export const GAME_SPEED = 1.0;
 
 /** Множитель скорости физики (влияет только на движение) */
-export const PHYSICS_SPEED = 1.6;
+export const PHYSICS_SPEED = 1.7;
 
 /** Настройки по уровням: i — цел. кол-во фигур на поле, k — порог для повышения уровня */
 export interface LevelConfig {
@@ -16,35 +16,41 @@ export interface LevelConfig {
 }
 
 export const LEVEL_CONFIG: LevelConfig[] = [
-  { i: 4,  k: 2 }, // Level 1
-  { i: 4,  k: 2 }, // Level 2
-  { i: 5,  k: 3 }, // Level 3
-  { i: 5,  k: 3 }, // Level 4
-  { i: 6,  k: 3 }, // Level 5
-  { i: 6,  k: 3 }, // Level 6
-  { i: 7,  k: 3 }, // Level 7
-  { i: 7,  k: 3 }, // Level 8
-  { i: 8,  k: 3 }, // Level 9
-  { i: 8, k: 3 }, // Level 10+
+  { i: 5,  k: 2 }, // Level 1
+  { i: 5,  k: 2 }, // Level 2
+  { i: 6,  k: 3 }, // Level 3
+  { i: 6,  k: 3 }, // Level 4
+  { i: 7,  k: 4 }, // Level 5
+  { i: 7,  k: 4 }, // Level 6
+  { i: 8,  k: 4 }, // Level 7
+  { i: 8,  k: 4 }, // Level 8
+  { i: 9,  k: 5 }, // Level 9
+  { i: 10, k: 5 }, // Level 10+
 ];
 
 /** Уровень, с которого цель начинает учитывать цвет */
 export const LEVEL_COLOR_START = 3;
 
-/** Бонус времени за монету (секунды) */
-export const COIN_TIME_BONUS = 4;
+/** Минимальный бонус времени за монету (секунды) */
+export const COIN_TIME_BONUS_MIN = 1;
+
+/** Максимальный бонус времени за монету (секунды) */
+export const COIN_TIME_BONUS_MAX = 3;
 
 /** Максимальное количество монет на поле одновременно */
 export const COIN_MAX_ON_FIELD = 1;
 
 /** Минимальное время между спауном монет (секунды) */
-export const COIN_SPAWN_DELAY_MIN = 5;
+export const COIN_SPAWN_DELAY_MIN = 8;
 
 /** Максимальное время между спауном монет (секунды) */
 export const COIN_SPAWN_DELAY_MAX = 15;
 
 /** Время жизни монеты до её исчезновения (секунды) */
 export const COIN_LIFETIME_SEC = 10;
+
+/** Уровень, с которого начинают появляться монеты */
+export const COIN_START_LEVEL = 2;
 
 /** Радиус монеты (в игровых единицах) */
 export const COIN_RADIUS = 0.5;
@@ -162,13 +168,13 @@ export const FIGURE_ANGULAR_DAMPING = 0.1;
 export const FIGURE_DRAG_ANGULAR_DAMPING = 10.0;
 
 /** Дистанция между точкой хвата и таргетом, при которой хват рвется */
-export const FIGURE_DRAG_LOSS_DISTANCE = 4.0;
+export const FIGURE_DRAG_LOSS_DISTANCE = 5.0;
 
 /** Максимальная линейная скорость фигуры (предотвращает туннелирование) */
 export const MAX_FIGURE_VELOCITY = 20;
 
 /** Отступ выше видимого поля, при превышении которого фигура считается выброшенной (в игровых единицах) */
-export const FIGURE_THROW_CEILING_OFFSET = 2.0;
+export const FIGURE_THROW_CEILING_OFFSET = 1.0;
 
 export const SPAWN_RADIUS = 2.0;
 
@@ -187,34 +193,54 @@ export const COLLISION_CATEGORY = {
 /** Collision Masks */
 export const COLLISION_MASK = {
   FLOOR: COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.DEFAULT,
-  WALL: COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.PLATFORM | COLLISION_CATEGORY.DEFAULT | COLLISION_CATEGORY.METEORITE,
-  FIGURE: COLLISION_CATEGORY.FLOOR | COLLISION_CATEGORY.WALL | COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.PLATFORM | COLLISION_CATEGORY.COIN | COLLISION_CATEGORY.METEORITE,
-  NEW_FIGURE: COLLISION_CATEGORY.WALL | COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.PLATFORM | COLLISION_CATEGORY.COIN | COLLISION_CATEGORY.METEORITE,
-  PLATFORM: COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.WALL,
+  WALL: COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.DEFAULT | COLLISION_CATEGORY.METEORITE,
+  FIGURE: COLLISION_CATEGORY.FLOOR | COLLISION_CATEGORY.WALL | COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.COIN | COLLISION_CATEGORY.METEORITE,
+  NEW_FIGURE: COLLISION_CATEGORY.WALL | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.PLATFORM,
+  PLATFORM: COLLISION_CATEGORY.NEW_FIGURE,
   COIN: COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE,
   METEORITE: COLLISION_CATEGORY.FIGURE | COLLISION_CATEGORY.NEW_FIGURE | COLLISION_CATEGORY.WALL,
 };
-
-/** Начальная Y-позиция появляющейся платформы (ниже экрана) */
-export const PLATFORM_START_Y = -8;
-
-/** Скорость подъема платформы */
-export const PLATFORM_SPEED = 8;
-
-/** Отступ по Y для первой фигуры на платформе */
-export const PLATFORM_SPAWN_OFFSET_Y = 2;
-
-/** Вертикальный зазор между фигурами на платформе */
-export const PLATFORM_SPAWN_GAP_Y = 2.5;
-
-/** Буфер по Y между топовой фигурой и уровнем пола при расчёте старта платформы */
-export const PLATFORM_MIN_Y_BUFFER = 2;
 
 /** Цвет заливки платформы */
 export const PLATFORM_FILL_STYLE = 'rgba(148, 135, 223, 0.3)';
 
 /** Цвет обводки платформы */
 export const PLATFORM_STROKE_STYLE = '#9487DF';
+
+/** Задержка после выброса до появления надписи «УРОВЕНЬ N» (секунды) */
+export const REFILL_DELAY_TEXT = 0.01;
+
+/** Задержка после выброса до начала подъёма платформы (секунды) */
+export const REFILL_DELAY_PLATFORM = 0.1;
+
+// ——— Платформа для рефилла ——————————————————————————————————————————————
+
+/** Y-позиция платформы в покое (ниже экрана) */
+export const PLATFORM_REST_Y = -15;
+
+/** Скорость подъёма платформы (игровых единиц в секунду) */
+export const PLATFORM_RISE_SPEED = 9;
+
+/** Скорость спуска платформы обратно (быстрее подъёма) */
+export const PLATFORM_DESCEND_SPEED = 20;
+
+/** Y-целевая позиция при подъёме — уровень пола */
+export const PLATFORM_TARGET_Y = 0.1;
+
+/** Полувысота бокса платформы (полная высота = 1.0) */
+export const PLATFORM_HALF_HEIGHT = 0.5;
+
+/** Смещение Y над платформой для появления фигур */
+export const PLATFORM_SPAWN_OFFSET_Y = 1.5;
+
+/** Вертикальный интервал между предзаспауненными фигурами */
+export const PLATFORM_SPAWN_GAP_Y = 2.5;
+
+/** Время ожидания, пока фигуры осядут на платформе (секунды) */
+export const PLATFORM_SETTLE_TIME = 0.8;
+
+/** Разброс начального угла предзаспауненных фигур */
+export const PLATFORM_SPAWN_ANGLE = 0.7;
 
 // ——— Анимация нового уровня ——————————————————————————————————————————————————
 
@@ -275,17 +301,33 @@ export const FLY_SCALE_END = 0.4;
 
 // ——— Метеорит ——————————————————————————————————————————————————————————————
 
-/** Уровень, с которого начинают падать метеориты */
-export const METEORITE_START_LEVEL = 5;
+/** Уровень, с которого начинают падать метеориты (макс 1, только 2-блочные) */
+export const METEORITE_START_LEVEL = 3;
+
+/** Уровень, с которого макс 2 метеорита (появляются 1-блочные) */
+export const METEORITE_PHASE2_LEVEL = 5;
+
+/** Уровень, с которого макс 3 метеорита */
+export const METEORITE_PHASE3_LEVEL = 7;
+
+/**
+ * Допустимые составы метеоритов на поле по фазам.
+ * Каждый элемент — [кол-во_2-блочных, кол-во_1-блочных].
+ */
+export const METEORITE_COMPOSITIONS: Record<string, [number, number][]> = {
+  /** Фаза 1 (уровни 3-4): макс 1 метеорит, только 2-блочный */
+  phase1: [[1, 0]],
+  /** Фаза 2 (уровни 5-6): макс 2 */
+  phase2: [[2, 0], [1, 1]],
+  /** Фаза 3 (уровни 7+): макс 3 */
+  phase3: [[2, 1], [1, 2]],
+};
 
 /** Минимальное время между спауном метеоритов (секунды) */
 export const METEORITE_SPAWN_DELAY_MIN = 2;
 
 /** Максимальное время между спауном метеоритов (секунды) */
 export const METEORITE_SPAWN_DELAY_MAX = 10;
-
-/** Максимальное количество метеоритов на поле одновременно */
-export const METEORITE_MAX_ON_FIELD = 1;
 
 /** Плотность каждого блока метеорита (2 блока × 4.0 = масса 8, фигура ~4) */
 export const METEORITE_DENSITY = 4.0;

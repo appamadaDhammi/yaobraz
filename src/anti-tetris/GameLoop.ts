@@ -15,6 +15,7 @@ export interface GameState {
   status: 'WAITING' | 'PLAYING';
   tutorialActive: boolean;
   coinsCollected: number;
+  lastCoinBonus: number;
 }
 
 export class AntiTetrisLoop extends PhysicsWorld {
@@ -30,6 +31,11 @@ export class AntiTetrisLoop extends PhysicsWorld {
   private isSlowInit: boolean;
   private isInitializing: boolean = false;
   private isRefilling: boolean = false;
+  private platformPhase: 'idle' | 'rising' | 'descending' | 'settling' = 'idle';
+  private platformSettleTimer: number = 0;
+  private platformLoaded: boolean = false;
+  private refillDelayTimer: number = 0;
+  private refillDelayTextShown: boolean = false;
   private isWaitingForSpawnZoneClear: boolean = false;
   private spawnsLeft: number = 0;
   private lastSpawnedFigure: Figure | null = null;
@@ -52,6 +58,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
       status: 'WAITING',
       tutorialActive: false,
       coinsCollected: 0,
+      lastCoinBonus: 0,
     };
 
     this.coinSpawnTimer = Settings.COIN_SPAWN_DELAY_MIN + Math.random() * (Settings.COIN_SPAWN_DELAY_MAX - Settings.COIN_SPAWN_DELAY_MIN);
@@ -266,9 +273,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   private updateTarget() {
-    if (this.figures.length === 0) return;
+    const regularFigures = this.figures.filter(f => !f.isNewFigure);
+    if (regularFigures.length === 0) return;
 
-    const selectedFigure = this.figures[Math.floor(Math.random() * this.figures.length)];
+    const selectedFigure = regularFigures[Math.floor(Math.random() * regularFigures.length)];
 
     if (selectedFigure) {
       this.state.targetShape = selectedFigure.shape;
@@ -311,7 +319,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     if (this.state.status === 'PLAYING') {
       const dt = 1 / 60;
       this.coinSpawnTimer -= dt * Settings.GAME_SPEED;
-      if (this.coinSpawnTimer <= 0) {
+      if (this.coinSpawnTimer <= 0 && this.state.level >= Settings.COIN_START_LEVEL) {
         if (this.coins.length < Settings.COIN_MAX_ON_FIELD) {
           // Spawn new coin in the upper area of the field randomly AND aligned to the 1x1 grid
           // width is 9, playable X is roughly 1..8
@@ -347,7 +355,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
           if (!other) continue;
           const otherData = other.getUserData();
           if (otherData instanceof Coin && !coinsToRemove.includes(otherData)) {
-            this.state.timer += Settings.COIN_TIME_BONUS;
+            const bonus = Settings.COIN_TIME_BONUS_MIN +
+              Math.floor(Math.random() * (Settings.COIN_TIME_BONUS_MAX - Settings.COIN_TIME_BONUS_MIN + 1));
+            this.state.timer += bonus;
+            this.state.lastCoinBonus = bonus;
             this.state.coinsCollected++;
             coinsToRemove.push(otherData);
           }
@@ -362,11 +373,12 @@ export class AntiTetrisLoop extends PhysicsWorld {
       if (this.state.level >= Settings.METEORITE_START_LEVEL) {
         this.meteoriteSpawnTimer -= dt * Settings.GAME_SPEED;
         if (this.meteoriteSpawnTimer <= 0) {
-          if (this.meteorites.length < Settings.METEORITE_MAX_ON_FIELD) {
+          const blockCount = this.pickMeteoriteBlockCount();
+          if (blockCount > 0) {
             const margin = 1.5;
             const x = margin + Math.random() * (this.width - margin * 2);
             const y = this.height + 3;
-            this.meteorites.push(new Meteorite(this.world, x, y));
+            this.meteorites.push(new Meteorite(this.world, x, y, blockCount));
           }
           this.meteoriteSpawnTimer = Settings.METEORITE_SPAWN_DELAY_MIN +
             Math.random() * (Settings.METEORITE_SPAWN_DELAY_MAX - Settings.METEORITE_SPAWN_DELAY_MIN);
@@ -388,21 +400,68 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
     this.checkAndSpawnNext();
 
-    if (this.isRefilling && this.platformBody) {
-      const pos = this.platformBody.getPosition();
-      if (pos.y >= 0) {
-        // Platform reached the floor level
-        this.world.destroyBody(this.platformBody);
-        this.platformBody = null;
-        this.isRefilling = false;
+    // ── Refill delay sequence ─────────────────────────────────────────
+    if (this.isRefilling && this.platformPhase === 'idle') {
+      this.refillDelayTimer += (1 / 60) * Settings.GAME_SPEED;
 
-        for (const figure of this.figures) {
-          if (figure.isNewFigure) {
-            figure.setAsRegularFigure();
+      if (!this.refillDelayTextShown && this.refillDelayTimer >= Settings.REFILL_DELAY_TEXT) {
+        this.state.level++;
+        this.refillDelayTextShown = true;
+      }
+
+      if (this.refillDelayTimer >= Settings.REFILL_DELAY_PLATFORM) {
+        this.platformPhase = 'rising';
+        this.platformBody.setLinearVelocity(new Vec2(0, Settings.PLATFORM_RISE_SPEED));
+      }
+    }
+
+    // ── Platform state machine ──────────────────────────────────────────
+    if (this.platformBody) {
+      const platformY = this.platformBody.getPosition().y;
+
+      switch (this.platformPhase) {
+        case 'rising': {
+          if (platformY >= Settings.PLATFORM_TARGET_Y) {
+            this.platformBody.setPosition(new Vec2(this.width / 2, Settings.PLATFORM_TARGET_Y));
+            this.platformBody.setLinearVelocity(new Vec2(0, 0));
+
+            // Convert all NEW_FIGURE to regular FIGURE and kill their velocity
+            for (const figure of this.figures) {
+              if (figure.isNewFigure) {
+                figure.body.setLinearVelocity(new Vec2(0, 0));
+                figure.body.setAngularVelocity(0);
+                figure.setAsRegularFigure();
+              }
+            }
+
+            // Start descending
+            this.platformPhase = 'descending';
+            this.platformBody.setLinearVelocity(new Vec2(0, -Settings.PLATFORM_DESCEND_SPEED));
+            this.platformLoaded = false;
+            this.isRefilling = false;
           }
+          break;
         }
-        // Re-select target after new figures land
-        this.updateTarget();
+        case 'descending': {
+          if (platformY <= Settings.PLATFORM_REST_Y) {
+            this.platformBody.setPosition(new Vec2(this.width / 2, Settings.PLATFORM_REST_Y));
+            this.platformBody.setLinearVelocity(new Vec2(0, 0));
+
+            // Pre-spawn figures for the next refill
+            this.preSpawnRefillFigures();
+          }
+          break;
+        }
+        case 'settling': {
+          this.platformSettleTimer -= (1 / 60) * Settings.GAME_SPEED;
+          if (this.platformSettleTimer <= 0) {
+            this.platformPhase = 'idle';
+            this.platformLoaded = true;
+          }
+          break;
+        }
+        case 'idle':
+          break;
       }
     }
 
@@ -489,7 +548,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
 
     // Velocity cap (extra safety, main protection is in onPostStep)
     for (const figure of this.figures) {
-      if (!figure.body) continue;
+      if (!figure.body || figure.isNewFigure) continue;
       const vel = figure.body.getLinearVelocity();
       const speedSq = vel.lengthSquared();
       if (speedSq > Settings.MAX_FIGURE_VELOCITY * Settings.MAX_FIGURE_VELOCITY) {
@@ -501,9 +560,10 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
     }
 
-    // Refill check
+    // Refill check (count only regular figures, not pre-spawned ones below)
     const levelCfg = this.getLevelConfig(this.state.level);
-    if (!this.isRefilling && this.state.status === 'PLAYING' && this.figures.length <= levelCfg.k) {
+    const regularFigureCount = this.figures.filter(f => !f.isNewFigure).length;
+    if (!this.isRefilling && this.state.status === 'PLAYING' && regularFigureCount <= levelCfg.k) {
       this.refill();
     }
   }
@@ -526,46 +586,83 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
   }
 
-  private refill() {
-    if (this.isRefilling) return;
-
-    const prevLevel = this.state.level;
-    this.state.level++;
-
-    // Compute how many figures to spawn: i(newLevel) − k(prevLevel)
-    const prevCfg = this.getLevelConfig(prevLevel);
-    const nextCfg = this.getLevelConfig(this.state.level);
-    const spawnCount = nextCfg.i - prevCfg.k;
-
-    this.isRefilling = true;
-
-    // Compute platform start Y so all figures safely spawn below the floor (y = 0).
-    // Each figure spawns at: platformY + OFFSET + i * GAP (angle=0, max height ~2 units).
-    // The topmost figure (i = spawnCount-1) must satisfy: y + GAP < 0.
-    const platformY = -(spawnCount * Settings.PLATFORM_SPAWN_GAP_Y + Settings.PLATFORM_SPAWN_OFFSET_Y + Settings.PLATFORM_MIN_Y_BUFFER);
+  private createPlatform() {
     this.platformBody = this.world.createBody({
       type: 'kinematic',
-      position: new Vec2(0, platformY),
+      position: new Vec2(this.width / 2, Settings.PLATFORM_REST_Y),
     });
     this.platformBody.createFixture({
-      shape: new Box(this.width / 2, 1, new Vec2(this.width / 2, -1)),
+      shape: new Box(
+        this.width / 2,
+        Settings.PLATFORM_HALF_HEIGHT,
+        new Vec2(0, -Settings.PLATFORM_HALF_HEIGHT)
+      ),
       filterCategoryBits: Settings.COLLISION_CATEGORY.PLATFORM,
       filterMaskBits: Settings.COLLISION_MASK.PLATFORM,
     });
-    this.platformBody.setLinearVelocity(new Vec2(0, Settings.PLATFORM_SPEED)); // Move upwards faster to compensate
+  }
 
-    // Spawn new figures vertically stacked on the platform to avoid overlap
+  private preSpawnRefillFigures() {
+    const currentLevel = this.state.level;
+    const currentCfg = this.getLevelConfig(currentLevel);
+    const nextCfg = this.getLevelConfig(currentLevel + 1);
+    const spawnCount = nextCfg.i - currentCfg.k;
+
+    const platformTopY = this.platformBody.getPosition().y;
     const playableWidth = this.width - 2;
+
     for (let i = 0; i < spawnCount; i++) {
-       // Random horizontal position, but kept away from edges
-       const x = 1.5 + Math.random() * (playableWidth - 1);
-       // Stack vertically with enough room to fall and relax
-       const y = platformY + Settings.PLATFORM_SPAWN_OFFSET_Y + i * Settings.PLATFORM_SPAWN_GAP_Y;
-       const figure = this.spawnFigure(x, y, true); // true for isNewFigure
-       // Slight tilt so figures don't stack perfectly flat, but small enough to keep height < 2 units
-       figure.body.setAngle((Math.random() - 0.5) * 0.4);
+      const x = 1.5 + Math.random() * (playableWidth - 1);
+      const y = platformTopY + Settings.PLATFORM_SPAWN_OFFSET_Y + i * Settings.PLATFORM_SPAWN_GAP_Y;
+      const figure = this.spawnFigure(x, y, true);
+      figure.body.setAngle((Math.random() - 0.5) * Settings.PLATFORM_SPAWN_ANGLE);
     }
 
+    this.platformPhase = 'settling';
+    this.platformSettleTimer = Settings.PLATFORM_SETTLE_TIME;
+  }
+
+  /**
+   * Determines what blockCount the next meteorite should have, based on
+   * the allowed compositions for the current phase and what's already on the field.
+   * Returns 0 if no more meteorites can be spawned.
+   */
+  private pickMeteoriteBlockCount(): number {
+    // Pick the phase compositions
+    let compositions: [number, number][];
+    if (this.state.level >= Settings.METEORITE_PHASE3_LEVEL) {
+      compositions = Settings.METEORITE_COMPOSITIONS.phase3!;
+    } else if (this.state.level >= Settings.METEORITE_PHASE2_LEVEL) {
+      compositions = Settings.METEORITE_COMPOSITIONS.phase2!;
+    } else {
+      compositions = Settings.METEORITE_COMPOSITIONS.phase1!;
+    }
+
+    // Count current meteorites by type
+    let cur2 = 0;
+    let cur1 = 0;
+    for (const m of this.meteorites) {
+      if (m.blockCount === 2) cur2++;
+      else cur1++;
+    }
+
+    // Find which compositions are still reachable (we can add one more meteorite to reach them)
+    const canAdd2 = compositions.some(([need2, need1]) => cur2 + 1 <= need2 && cur1 <= need1);
+    const canAdd1 = compositions.some(([need2, need1]) => cur2 <= need2 && cur1 + 1 <= need1);
+
+    if (canAdd2 && canAdd1) return Math.random() < 0.5 ? 2 : 1;
+    if (canAdd2) return 2;
+    if (canAdd1) return 1;
+    return 0; // field is full
+  }
+
+  private refill() {
+    if (this.isRefilling || this.platformPhase !== 'idle') return;
+    if (!this.platformLoaded) return;
+
+    this.isRefilling = true;
+    this.refillDelayTimer = 0;
+    this.refillDelayTextShown = false;
   }
 
   public handleInput(input: any) { // InputState
@@ -579,9 +676,9 @@ export class AntiTetrisLoop extends PhysicsWorld {
         for (const fig of this.figures) {
           fig.body.setAngularVelocity((Math.random() - 0.5) * 5);
         }
-        // if (typeof document !== 'undefined' && document.body.requestFullscreen) {
-        //   document.body.requestFullscreen().catch(() => {});
-        // }
+        // Create platform and pre-spawn first batch of refill figures
+        this.createPlatform();
+        this.preSpawnRefillFigures();
       }
       return;
     }
@@ -594,11 +691,11 @@ export class AntiTetrisLoop extends PhysicsWorld {
         this.mouseJoint = null;
       }
 
-      // First pass: find hit figure
+      // First pass: find hit figure (skip pre-spawned figures below)
       let hitFigure: Figure | null = null;
       for (let i = this.figures.length - 1; i >= 0; i--) {
         const figure = this.figures[i];
-        if (figure) {
+        if (figure && !figure.isNewFigure) {
           let hit = false;
           for (let f = figure.body.getFixtureList(); f; f = f.getNext()) {
             if (f.testPoint(new Vec2(input.x, input.y))) { // Note: using raw input for initial hit test
@@ -707,10 +804,26 @@ export class AntiTetrisLoop extends PhysicsWorld {
       }
     }
 
-    // Rescale platform body
+    // Rescale platform body and recreate fixture with new width
     if (this.platformBody) {
       const pos = this.platformBody.getPosition();
-      this.platformBody.setPosition(new Vec2(pos.x, pos.y * scaleY));
+      this.platformBody.setPosition(new Vec2(this.width / 2, pos.y * scaleY));
+
+      let pf = this.platformBody.getFixtureList();
+      while (pf) {
+        const nextF = pf.getNext();
+        this.platformBody.destroyFixture(pf);
+        pf = nextF;
+      }
+      this.platformBody.createFixture({
+        shape: new Box(
+          this.width / 2,
+          Settings.PLATFORM_HALF_HEIGHT,
+          new Vec2(0, -Settings.PLATFORM_HALF_HEIGHT)
+        ),
+        filterCategoryBits: Settings.COLLISION_CATEGORY.PLATFORM,
+        filterMaskBits: Settings.COLLISION_MASK.PLATFORM,
+      });
     }
 
     // Recreate walls for new dimensions

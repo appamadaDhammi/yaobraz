@@ -57,6 +57,7 @@ const state = reactive<GameState>({
   status: 'WAITING',
   tutorialActive: false,
   coinsCollected: 0,
+  lastCoinBonus: 0,
 });
 
 const emit = defineEmits(['update-state']);
@@ -153,7 +154,7 @@ onMounted(() => {
     if (loopState.status === 'PLAYING' && loopState.coinsCollected > state.coinsCollected) {
       textAnimations.push({
         startTime: time,
-        text: `${Settings.COIN_COLLECT_TEXT} +${Settings.COIN_TIME_BONUS}`,
+        text: `${Settings.COIN_COLLECT_TEXT} +${loopState.lastCoinBonus}`,
         color: Settings.COIN_COLLECT_COLOR,
         yRatio: Settings.COIN_COLLECT_Y_RATIO,
         flyTargetX: Settings.COIN_FLY_TARGET_X,

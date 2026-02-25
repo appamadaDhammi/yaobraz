@@ -8,8 +8,10 @@ import * as Settings from './Settings';
  */
 export class Meteorite {
   public body: any; // planck.Body
+  public blockCount: number;
 
-  constructor(world: World, x: number, y: number) {
+  constructor(world: World, x: number, y: number, blockCount: number = 2) {
+    this.blockCount = blockCount;
     const bodyDef: BodyDef = {
       type: 'dynamic',
       position: new Vec2(x, y),
@@ -21,10 +23,10 @@ export class Meteorite {
 
     this.body = world.createBody(bodyDef);
 
-    // 2-block vertical domino, centered on origin
-    const blocks: [number, number][] = [[0, 0], [0, 1]];
+    const blocks: [number, number][] = [];
+    for (let i = 0; i < blockCount; i++) blocks.push([0, i]);
     const offsetX = 0;
-    const offsetY = 0.5;
+    const offsetY = (blockCount - 1) / 2;
 
     for (const [cx, cy] of blocks) {
       const fixtureDef: FixtureDef = {

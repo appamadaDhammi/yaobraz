@@ -50,7 +50,7 @@ export class Figure {
         ]),
         density: 1.0,
         friction: Settings.FIGURE_FRICTION,
-        restitution: Settings.FIGURE_RESTITUTION,
+        restitution: isNewFigure ? 0 : Settings.FIGURE_RESTITUTION,
         filterCategoryBits: isNewFigure ? Settings.COLLISION_CATEGORY.NEW_FIGURE : Settings.COLLISION_CATEGORY.FIGURE,
         filterMaskBits: isNewFigure ? Settings.COLLISION_MASK.NEW_FIGURE : Settings.COLLISION_MASK.FIGURE,
       };
@@ -72,6 +72,7 @@ export class Figure {
         maskBits: Settings.COLLISION_MASK.FIGURE,
         groupIndex: 0
       });
+      f.setRestitution(Settings.FIGURE_RESTITUTION);
     }
   }
 

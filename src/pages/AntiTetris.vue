@@ -45,6 +45,7 @@ const gameState = reactive<GameState>({
   status: 'WAITING',
   tutorialActive: false,
   coinsCollected: 0,
+  lastCoinBonus: 0,
 });
 
 const onStateUpdate = (newState: GameState) => {
