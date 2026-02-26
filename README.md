@@ -1,33 +1,87 @@
-# YAEDU Stand
+# YAEDU Exhibition Stand
 
-## Prerequisites
+Интерактивный выставочный киоск с игрой Anti-Tetris для тачскрин-дисплеев.
 
-- **Node.js** (LTS version recommended)
-- **npm** (comes with Node.js)
+## Быстрый старт (чистый Mac Mini)
 
-## Installation
+### 1. Установить Homebrew
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+Открыть Terminal (Finder → Программы → Утилиты → Terminal) и вставить:
 
-## Development
-
-### Run Development Server
-Starts a local development server with Hot Module Replacement (HMR).
 ```bash
-npm run dev
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-### Build for Production
-Compiles and minifies for production.
+После установки выполнить команды, которые Homebrew выведет на экран (добавление в PATH).
+Обычно это:
+
 ```bash
-npm run build
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
 
-### Run Tests
-Executes unit and integration tests using Vitest.
+### 2. Установить Node.js
+
 ```bash
-npm run test
+brew install node
 ```
+
+Проверить:
+
+```bash
+node -v   # v22.x или новее
+npm -v    # 10.x или новее
+```
+
+### 3. Перейти в папку с проектом
+
+Код уже находится на устройстве. Перейти в папку проекта:
+
+```bash
+cd /путь/к/ya-edu-exhibition
+```
+
+### 4. Установить зависимости
+
+```bash
+npm install
+```
+
+### 5. Запустить киоск
+
+```bash
+npm run kiosk
+```
+
+Vite-сервер стартует, через 3 секунды откроется полноэкранное Electron-окно с игрой.
+
+---
+
+## Команды
+
+| Команда | Описание |
+|---------|----------|
+| `npm run kiosk` | Запуск киоска (Vite + Electron fullscreen) |
+| `npm run dev` | Только dev-сервер (без Electron) |
+| `npm run build` | Проверка типов + production-сборка |
+| `npm run test` | Запуск тестов (Vitest) |
+
+## Страница настроек
+
+Открыть в браузере `https://localhost:5173/settings` — страница для оператора:
+
+- **Формула ранка** — таблица: уровень → ранк (отправляется в QR)
+- **QR-параметры** — зашитые n\_ и c\_ значения, имя бота
+- **Сетевой адрес** — URL для доступа с других устройств в локальной сети
+- **Счётчик ID** — текущее значение из localStorage
+
+## Устранение проблем
+
+- **Предупреждение о сертификате в браузере**: Dev-сервер использует самоподписанный SSL-сертификат. В Chrome набрать `thisisunsafe` для обхода. Electron обрабатывает это автоматически.
+- **Electron не открывается**: Убедиться, что порт 5173 свободен. Если машина медленная, увеличить `sleep 3` в скрипте `kiosk` в `package.json`.
+- **Тач не работает**: Убедиться, что дисплей распознаётся macOS как тачскрин.
+- **DevTools в киоске**: Нажать `Cmd+Option+I` для открытия инструментов разработчика.
+
+## Архитектура
+
+См. [CLAUDE.md](CLAUDE.md) для полной технической документации.
