@@ -2,18 +2,60 @@
 
 Интерактивный выставочный киоск с игрой Anti-Tetris для тачскрин-дисплеев.
 
-## Быстрый старт (чистый Mac Mini)
+---
+
+## Быстрый старт — Windows
+
+### 1. Установить Node.js
+
+Открыть PowerShell и выполнить:
+
+```powershell
+winget install OpenJS.NodeJS
+```
+
+Закрыть и заново открыть PowerShell. Проверить:
+
+```powershell
+node -v
+npm -v
+```
+
+### 2. Перейти в папку с проектом
+
+```powershell
+cd C:\путь\к\ya-edu-exhibition
+```
+
+### 3. Установить зависимости
+
+Если папка `node_modules` или `package-lock.json` уже есть (код скопирован с другой
+машины) — удалить перед установкой:
+
+```powershell
+Remove-Item -Recurse -Force node_modules, package-lock.json -ErrorAction SilentlyContinue
+npm install
+```
+
+### 4. Запустить киоск
+
+```powershell
+npm run kiosk
+```
+
+---
+
+## Быстрый старт — macOS
 
 ### 1. Установить Homebrew
 
-Открыть Terminal (Finder → Программы → Утилиты → Terminal) и вставить:
+Открыть Terminal и вставить:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-После установки выполнить команды, которые Homebrew выведет на экран (добавление в PATH).
-Обычно это:
+После установки выполнить команды, которые Homebrew выведет на экран:
 
 ```bash
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
@@ -29,13 +71,11 @@ brew install node
 Проверить:
 
 ```bash
-node -v   # v22.x или новее
-npm -v    # 10.x или новее
+node -v
+npm -v
 ```
 
 ### 3. Перейти в папку с проектом
-
-Код уже находится на устройстве. Перейти в папку проекта:
 
 ```bash
 cd /путь/к/ya-edu-exhibition
@@ -44,7 +84,7 @@ cd /путь/к/ya-edu-exhibition
 ### 4. Установить зависимости
 
 Если папка `node_modules` или `package-lock.json` уже есть (код скопирован с другой
-машины) — удалить их перед установкой:
+машины) — удалить перед установкой:
 
 ```bash
 rm -rf node_modules package-lock.json
@@ -58,10 +98,6 @@ npm install
 ```bash
 npm run kiosk
 ```
-
-Vite-сервер стартует, через 3 секунды откроется полноэкранное Electron-окно с игрой.
-
-> При первом запуске macOS может спросить разрешение — нажать «Открыть».
 
 ---
 
@@ -85,15 +121,29 @@ Vite-сервер стартует, через 3 секунды откроетс
 
 ## Устранение проблем
 
+### Windows
+
+- **electron не найден**: Закрыть и заново открыть PowerShell после `npm install`.
+- **Cannot find module @rollup/rollup-win32-...**: `package-lock.json` от другой ОС.
+  Исправить: `Remove-Item -Recurse -Force node_modules, package-lock.json` затем `npm install`.
+- **Windows Defender блокирует**: Разрешить доступ в появившемся диалоге или добавить
+  папку проекта в исключения Windows Defender.
+
+### macOS
+
 - **Electron убит (SIGKILL)**: macOS Gatekeeper блокирует неподписанный Electron.
-  Открыть Системные настройки → Конфиденциальность и безопасность → нажать «Всё равно открыть».
-  Или вручную: `xattr -cr node_modules/electron/dist/Electron.app`
+  Открыть Системные настройки → Конфиденциальность и безопасность → «Всё равно открыть».
+  Или: `xattr -cr node_modules/electron/dist/Electron.app`
 - **Cannot find module @rollup/rollup-darwin-arm64**: `package-lock.json` от другой машины.
   Исправить: `rm -rf node_modules package-lock.json && npm install`
-- **Предупреждение о сертификате в браузере**: Dev-сервер использует самоподписанный SSL-сертификат. В Chrome набрать `thisisunsafe` для обхода. Electron обрабатывает это автоматически.
-- **Electron не открывается**: Убедиться, что порт 5173 свободен. Если машина медленная, увеличить `sleep 3` в скрипте `kiosk` в `package.json`.
-- **Тач не работает**: Убедиться, что дисплей распознаётся macOS как тачскрин.
-- **DevTools в киоске**: Нажать `Cmd+Option+I` для открытия инструментов разработчика.
+
+### Общее
+
+- **Предупреждение о сертификате**: Dev-сервер использует самоподписанный SSL.
+  В Chrome набрать `thisisunsafe`. Electron обрабатывает это автоматически.
+- **Electron не открывается**: Убедиться, что порт 5173 свободен.
+- **Тач не работает**: Убедиться, что дисплей распознаётся ОС как тачскрин.
+- **DevTools в киоске**: `Ctrl+Shift+I` (Windows) или `Cmd+Option+I` (macOS).
 
 ## Архитектура
 
