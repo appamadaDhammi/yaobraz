@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Welcome from '@/pages/Welcome.vue';
 import AntiTetris from '@/pages/AntiTetris.vue';
 import BinaryMaze from '@/pages/BinaryMaze.vue';
+import Settings from '@/pages/Settings.vue';
 
 const routes = [
   {
@@ -18,6 +19,11 @@ const routes = [
     path: '/binary-maze',
     name: 'BinaryMaze',
     component: BinaryMaze,
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
   },
 ];
 
