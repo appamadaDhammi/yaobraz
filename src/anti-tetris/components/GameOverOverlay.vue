@@ -15,7 +15,7 @@
           <div class="QrContainer">
             <QrcodeVue :value="qrUrl" :size="530" level="H" background="#00000000" foreground="#F4EB8C" />
           </div>
-          <div class="QrHint">отсканируй, чтобы получить приз</div>
+          <div class="QrHint">{{ QR_HINT_TEXT }}</div>
         </div>
 
         <button class="GameOver__btn" @click="$emit('restart')">ИГРАТЬ СНОВА</button>
@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import QrcodeVue from 'qrcode.vue';
-import { TELEGRAM_BOT_LINK } from '../Settings';
+import { QR_BOT_N, QR_BOT_C, QR_BOT_USERNAME, QR_HINT_TEXT, getRank } from '../Settings';
 
 const props = defineProps<{
   level: number;
@@ -60,13 +60,13 @@ onMounted(() => {
     return btoa(`id=${id * 1234 + 7654}&rank=${id * rank * 7654 + 1234}`);
   }
   
-  const rank = Math.floor(props.level / 4) + 1;
+  const rank = getRank(props.level);
   const payload = encode(idCounter, rank);
-  
+
   idCounter++;
   localStorage.setItem('ya_edu_anti_tetris_id', idCounter.toString());
-  
-  qrUrl.value = `${TELEGRAM_BOT_LINK}?start=${payload}`;
+
+  qrUrl.value = `https://t.me/${QR_BOT_USERNAME}?start=n_${QR_BOT_N}__c_${QR_BOT_C}__v_${payload}`;
 
   updateScale();
   if (containerRef.value) {

@@ -146,8 +146,34 @@ export const START_TEXT = 'НАЧАТЬ ИГРУ';
 /** Текст туториала */
 export const TUTORIAL_TEXT = 'КИДАЙ ВВЕРХ';
 
-/** Ссылка на Telegram бота */
+/** Ссылка на Telegram бота (legacy) */
 export const TELEGRAM_BOT_LINK = import.meta.env.VITE_TELEGRAM_BOT_LINK || 'https://t.me/your_bot_name';
+
+/** Параметр n_ для QR-ссылки бота */
+export const QR_BOT_N = 191849;
+
+/** Параметр c_ для QR-ссылки бота */
+export const QR_BOT_C = 12054;
+
+/** Имя бота для QR-ссылки */
+export const QR_BOT_USERNAME = 'yaeducation_bot';
+
+/** Текст-подсказка под QR-кодом */
+export const QR_HINT_TEXT = 'Отсканируй QR и узнай свой результат!';
+
+/** Таблица маппинга уровень → ранк */
+export const RANK_TABLE: { minLevel: number; maxLevel: number; rank: number }[] = [
+  { minLevel: 0, maxLevel: 3, rank: 0 },
+  { minLevel: 4, maxLevel: 5, rank: 1 },
+  { minLevel: 6, maxLevel: 7, rank: 2 },
+  { minLevel: 8, maxLevel: Infinity, rank: 3 },
+];
+
+/** Вычислить ранк по уровню */
+export function getRank(level: number): number {
+  const entry = RANK_TABLE.find(e => level >= e.minLevel && level <= e.maxLevel);
+  return entry ? entry.rank : 3;
+}
 
 export type FigureShape = (typeof FIGURE_SHAPES)[number];
 export type FigureColor = (typeof FIGURE_COLORS)[number];
