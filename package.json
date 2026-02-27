@@ -13,7 +13,9 @@
     "postinstall": "node -e \"try{require('child_process').execSync('xattr -cr node_modules/electron/dist/Electron.app')}catch{}\""
   },
   "dependencies": {
+    "canvas": "^3.2.1",
     "planck": "^1.4.2",
+    "qrcode": "^1.5.4",
     "qrcode.vue": "^3.8.0",
     "vue": "^3.5.25",
     "vue-router": "^4.6.4"
@@ -25,10 +27,10 @@
     "@vue/tsconfig": "^0.8.1",
     "concurrently": "^9.1.2",
     "electron": "^40.6.1",
-    "wait-on": "^8.0.3",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vitest": "^4.0.18",
-    "vue-tsc": "^3.1.5"
+    "vue-tsc": "^3.1.5",
+    "wait-on": "^8.0.3"
   }
 }
