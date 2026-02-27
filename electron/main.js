@@ -41,6 +41,13 @@ const createWindow = () => {
       mainWindow.webContents.reload();
       event.preventDefault();
     }
+    // Shift + Alt + K → Toggle cursor visibility
+    if (input.shift && input.alt && input.key.toLowerCase() === 'k') {
+      mainWindow.webContents.executeJavaScript(`
+        document.body.style.cursor = document.body.style.cursor === 'none' ? '' : 'none';
+      `);
+      event.preventDefault();
+    }
   });
 
   mainWindow.loadURL('https://localhost:5173/anti-tetris');

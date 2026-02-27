@@ -15,7 +15,7 @@
           <div class="QrContainer">
             <QrcodeVue :value="qrUrl" :size="530" level="H" background="#00000000" foreground="#F4EB8C" />
           </div>
-          <div class="QrHint">{{ S.QR_HINT_TEXT }}</div>
+          <div class="QrHint" style="white-space: pre-line">{{ S.QR_HINT_TEXT }}</div>
         </div>
 
         <button class="GameOver__btn" @click="$emit('restart')">ИГРАТЬ СНОВА</button>

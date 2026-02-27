@@ -143,7 +143,7 @@ const DEFAULTS = {
   QR_BOT_N: 191849,
   QR_BOT_C: 12054,
   QR_BOT_USERNAME: 'yaeducation_bot',
-  QR_HINT_TEXT: 'Отсканируй QR и узнай свой результат!',
+  QR_HINT_TEXT: 'Отсканируй QR\nи узнай свой\nрезультат!',
   RANK_TABLE: [
     { minLevel: 0, maxLevel: 3, rank: 0 },
     { minLevel: 4, maxLevel: 5, rank: 1 },
