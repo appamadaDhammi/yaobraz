@@ -23,7 +23,7 @@ import { ref, onMounted, onUnmounted, reactive } from 'vue';
 import { AntiTetrisLoop } from '../GameLoop';
 import type { GameState } from '../GameLoop';
 import { InputHandler } from '../../core/InputHandler';
-import * as Settings from '../Settings';
+import { S as Settings } from '../Settings';
 import { generateDynamicBlockTexture } from '../BlockTexture';
 import coinSpriteUrl from '../assets/coin-sprite.png';
 

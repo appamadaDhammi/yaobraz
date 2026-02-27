@@ -1,6 +1,5 @@
 import { World, Vec2, Polygon, type BodyDef, type FixtureDef } from 'planck';
-import { type FigureShape, type FigureColor } from './Settings';
-import * as Settings from './Settings';
+import { S as Settings, type FigureShape, type FigureColor } from './Settings';
 
 const SHAPES: Record<FigureShape, number[][]> = {
   I: [[0, 0], [0, 1], [0, 2], [0, 3]],

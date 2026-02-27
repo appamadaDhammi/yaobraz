@@ -35,8 +35,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { FigureShape, FigureColor } from '../Settings';
-import * as Settings from '../Settings';
+import { S as Settings, type FigureShape, type FigureColor } from '../Settings';
 
 import timelineBg from '../assets/timeline-bg.png';
 import timelineValue from '../assets/timeline-value.png';

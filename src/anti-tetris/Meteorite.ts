@@ -1,5 +1,5 @@
 import { World, Vec2, Polygon, type BodyDef, type FixtureDef } from 'planck';
-import * as Settings from './Settings';
+import { S as Settings } from './Settings';
 
 /**
  * A 2-block vertical "meteorite" that falls from above.

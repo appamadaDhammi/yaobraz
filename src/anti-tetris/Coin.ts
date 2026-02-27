@@ -1,5 +1,5 @@
 import { World, Vec2, Circle, type BodyDef, type FixtureDef } from 'planck';
-import * as Settings from './Settings';
+import { S as Settings } from './Settings';
 
 export class Coin {
   public body: any; // planck.Body

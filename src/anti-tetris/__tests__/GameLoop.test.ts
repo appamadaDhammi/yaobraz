@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AntiTetrisLoop, type GameState } from '../GameLoop';
-import * as Settings from '../Settings';
+import { S as Settings } from '../Settings';
 
 /**
  * Integration tests for AntiTetrisLoop.

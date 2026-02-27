@@ -12,7 +12,7 @@
  * vertically mirrored — this is accounted for in sub-cell placement.
  */
 
-import * as Settings from './Settings';
+import { S as Settings } from './Settings';
 
 // ---------------------------------------------------------------------------
 // Colour helpers

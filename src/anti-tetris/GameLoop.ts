@@ -3,13 +3,13 @@ import { PhysicsWorld } from '../core/PhysicsWorld';
 import { Figure } from './Figure';
 import { Coin } from './Coin';
 import { Meteorite } from './Meteorite';
-import * as Settings from './Settings';
+import { S as Settings, type FigureShape, type FigureColor, type LevelConfig } from './Settings';
 
 export interface GameState {
   level: number;
   timer: number;
-  targetShape: Settings.FigureShape;
-  targetColor: Settings.FigureColor | 'white';
+  targetShape: FigureShape;
+  targetColor: FigureColor | 'white';
   isGameOver: boolean;
   hintVisible: boolean;
   status: 'WAITING' | 'PLAYING';
@@ -74,7 +74,7 @@ export class AntiTetrisLoop extends PhysicsWorld {
     }
   }
 
-  private getLevelConfig(level: number): Settings.LevelConfig {
+  private getLevelConfig(level: number): LevelConfig {
     const idx = Math.min(level - 1, Settings.LEVEL_CONFIG.length - 1);
     return Settings.LEVEL_CONFIG[idx]!;
   }
@@ -262,8 +262,8 @@ export class AntiTetrisLoop extends PhysicsWorld {
   }
 
   private spawnFigure(customX?: number, customY?: number, isNewFigure: boolean = false): Figure {
-    const shape = Settings.FIGURE_SHAPES[Math.floor(Math.random() * Settings.FIGURE_SHAPES.length)];
-    const color = Settings.FIGURE_COLORS[Math.floor(Math.random() * Settings.FIGURE_COLORS.length)];
+    const shape = Settings.FIGURE_SHAPES[Math.floor(Math.random() * Settings.FIGURE_SHAPES.length)] as FigureShape;
+    const color = Settings.FIGURE_COLORS[Math.floor(Math.random() * Settings.FIGURE_COLORS.length)] as FigureColor;
     const x = customX !== undefined ? customX : Math.random() * (this.width - 4) + 2;
     const y = customY !== undefined ? customY : this.height + Math.random() * 5;
 

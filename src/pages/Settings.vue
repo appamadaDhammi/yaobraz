@@ -5,44 +5,43 @@
 
       <h1 class="Settings__title">Настройки</h1>
 
-      <section class="Settings__section">
-        <h2 class="Settings__subtitle">Формула ранка</h2>
-        <table class="RankTable">
-          <thead>
-            <tr>
-              <th class="RankTable__th">Уровень</th>
-              <th class="RankTable__th">Ранк</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="entry in rankTable" :key="entry.minLevel" class="RankTable__row">
-              <td class="RankTable__td">
-                {{ entry.maxLevel === Infinity ? `${entry.minLevel}+` : `${entry.minLevel}–${entry.maxLevel}` }}
-              </td>
-              <td class="RankTable__td">{{ entry.rank }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+      <div class="Settings__actions">
+        <button class="Btn Btn--reset" @click="handleReset">Сбросить всё</button>
+      </div>
 
-      <section class="Settings__section">
-        <h2 class="Settings__subtitle">QR-параметры</h2>
+      <section v-for="section in SETTINGS_SECTIONS" :key="section.title" class="Settings__section">
+        <h2 class="Settings__subtitle">{{ section.title }}</h2>
         <div class="ParamList">
-          <div class="ParamList__item">
-            <span class="ParamList__label">Bot</span>
-            <span class="ParamList__value">@{{ QR_BOT_USERNAME }}</span>
+          <div v-for="key in section.keys" :key="key" class="ParamList__item">
+            <label class="ParamList__label" :for="'s-' + key">{{ key }}</label>
+
+            <input
+              v-if="typeof form[key] === 'number'"
+              :id="'s-' + key"
+              class="ParamList__input"
+              type="number"
+              step="any"
+              :value="form[key]"
+              @change="onNumberChange(key, $event)"
+            />
+
+            <input
+              v-else-if="typeof form[key] === 'string'"
+              :id="'s-' + key"
+              class="ParamList__input ParamList__input--text"
+              type="text"
+              :value="form[key]"
+              @change="onStringChange(key, $event)"
+            />
+
+            <textarea
+              v-else
+              :id="'s-' + key"
+              class="ParamList__textarea"
+              :value="jsonStringify(form[key])"
+              @change="onJsonChange(key, $event)"
+            ></textarea>
           </div>
-          <div class="ParamList__item">
-            <span class="ParamList__label">n_</span>
-            <span class="ParamList__value">{{ QR_BOT_N }}</span>
-          </div>
-          <div class="ParamList__item">
-            <span class="ParamList__label">c_</span>
-            <span class="ParamList__value">{{ QR_BOT_C }}</span>
-          </div>
-        </div>
-        <div class="Settings__formula">
-          <code>btoa("id=${id*1234+7654}&amp;rank=${id*rank*7654+1234}")</code>
         </div>
       </section>
 
@@ -81,14 +80,66 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { RANK_TABLE, QR_BOT_N, QR_BOT_C, QR_BOT_USERNAME } from '@/anti-tetris/Settings';
+import { ref, reactive, onMounted } from 'vue';
+import {
+  S,
+  SETTINGS_SECTIONS,
+  getAllSettings,
+  saveSettings,
+  resetSettings,
+  getDefaults,
+} from '@/anti-tetris/Settings';
 
-const rankTable = RANK_TABLE;
+const form = reactive<Record<string, unknown>>(getAllSettings());
+
 const currentUrl = ref('');
 const gameUrl = ref('');
 const settingsUrl = ref('');
 const idCounter = ref(1);
+
+function jsonReplacer(_k: string, v: unknown) {
+  return v === Infinity ? '__Infinity__' : v;
+}
+
+function jsonReviver(_k: string, v: unknown) {
+  return v === '__Infinity__' ? Infinity : v;
+}
+
+function jsonStringify(value: unknown): string {
+  return JSON.stringify(value, jsonReplacer, 2);
+}
+
+function apply(key: string, value: unknown) {
+  form[key] = value;
+  saveSettings({ [key]: value });
+}
+
+function onNumberChange(key: string, e: Event) {
+  const v = parseFloat((e.target as HTMLInputElement).value);
+  if (!isNaN(v)) apply(key, v);
+}
+
+function onStringChange(key: string, e: Event) {
+  apply(key, (e.target as HTMLInputElement).value);
+}
+
+function onJsonChange(key: string, e: Event) {
+  try {
+    const parsed = JSON.parse((e.target as HTMLTextAreaElement).value, jsonReviver);
+    apply(key, parsed);
+    (e.target as HTMLTextAreaElement).classList.remove('is-error');
+  } catch {
+    (e.target as HTMLTextAreaElement).classList.add('is-error');
+  }
+}
+
+function handleReset() {
+  resetSettings();
+  const fresh = getDefaults();
+  for (const k of Object.keys(fresh)) {
+    form[k] = (fresh as Record<string, unknown>)[k];
+  }
+}
 
 onMounted(() => {
   currentUrl.value = window.location.href;
@@ -110,7 +161,7 @@ onMounted(() => {
 }
 
 .Settings__container {
-  max-width: 600px;
+  max-width: 700px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -139,6 +190,30 @@ onMounted(() => {
   margin: 0;
 }
 
+.Settings__actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.Btn {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.Btn--reset {
+  background: #EC775E;
+  color: #fff;
+}
+
+.Btn--reset:hover {
+  opacity: 0.85;
+}
+
 .Settings__section {
   background: rgba(255, 255, 255, 0.05);
   padding: 1.25rem;
@@ -155,16 +230,6 @@ onMounted(() => {
   margin: 0 0 1rem;
 }
 
-.Settings__formula {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 0.5rem;
-  font-size: 0.85rem;
-  color: #F4EB8C;
-  overflow-x: auto;
-}
-
 .Settings__note {
   margin: 0.75rem 0 0;
   font-size: 0.85rem;
@@ -177,52 +242,78 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
-.RankTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.RankTable__th {
-  text-align: left;
-  padding: 0.5rem 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.RankTable__row:not(:last-child) .RankTable__td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.RankTable__td {
-  padding: 0.5rem 0.75rem;
-  font-size: 1rem;
-}
-
 .ParamList {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
 .ParamList__item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 0.4rem 0;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.3rem 0;
 }
 
 .ParamList__label {
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  padding-top: 0.35rem;
+  max-width: 50%;
+  word-break: break-all;
 }
 
 .ParamList__value {
   color: #F6C578;
   font-weight: 600;
   font-size: 1rem;
+}
+
+.ParamList__input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem;
+  color: #F6C578;
+  font-size: 0.9rem;
+  font-family: monospace;
+  padding: 0.35rem 0.5rem;
+  width: 140px;
+  text-align: right;
+  transition: border-color 0.15s;
+}
+
+.ParamList__input--text {
+  width: 220px;
+  text-align: left;
+}
+
+.ParamList__input:focus {
+  outline: none;
+  border-color: #818cf8;
+}
+
+.ParamList__textarea {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem;
+  color: #F6C578;
+  font-size: 0.78rem;
+  font-family: monospace;
+  padding: 0.4rem 0.5rem;
+  width: 280px;
+  min-height: 60px;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+
+.ParamList__textarea:focus {
+  outline: none;
+  border-color: #818cf8;
+}
+
+.ParamList__textarea.is-error {
+  border-color: #EC775E;
 }
 </style>
