@@ -13,7 +13,7 @@
       </div>
 
       <div class="Stat Stat--next">
-        <label class="Stat__label">фигура:</label>
+        <label class="Stat__label">цель:</label>
         <div class="TargetBox">
           <div
             class="TargetBox__figure"
