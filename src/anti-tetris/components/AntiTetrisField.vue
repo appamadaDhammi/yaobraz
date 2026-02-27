@@ -23,7 +23,7 @@ import { ref, onMounted, onUnmounted, reactive } from 'vue';
 import { AntiTetrisLoop } from '../GameLoop';
 import type { GameState } from '../GameLoop';
 import { InputHandler } from '../../core/InputHandler';
-import { S as Settings } from '../Settings';
+import { S as Settings, loadSettingsFromServer } from '../Settings';
 import { generateDynamicBlockTexture } from '../BlockTexture';
 import coinSpriteUrl from '../assets/coin-sprite.png';
 
@@ -98,8 +98,10 @@ const emit = defineEmits(['update-state']);
     loop.resize(width, height);
   };
 
-onMounted(() => {
+onMounted(async () => {
   if (!canvas.value || !container.value) return;
+
+  await loadSettingsFromServer();
 
   const rect = container.value.getBoundingClientRect();
   const width = Settings.FIELD_WIDTH;

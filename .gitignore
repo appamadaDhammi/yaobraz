@@ -25,3 +25,6 @@ dist-ssr
 
 # Generated QR samples
 qr-samples/
+
+# Runtime settings (server-side)
+settings.json

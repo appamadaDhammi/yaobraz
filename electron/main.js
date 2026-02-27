@@ -31,8 +31,14 @@ const createWindow = () => {
   Menu.setApplicationMenu(null);
 
   mainWindow.webContents.on('before-input-event', (event, input) => {
+    // Ctrl/Cmd + Shift/Alt + I → DevTools
     if ((input.control || input.meta) && (input.shift || input.alt) && input.key.toLowerCase() === 'i') {
       mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+    // Shift + Alt + R → Reload page
+    if (input.shift && input.alt && input.key.toLowerCase() === 'r') {
+      mainWindow.webContents.reload();
       event.preventDefault();
     }
   });

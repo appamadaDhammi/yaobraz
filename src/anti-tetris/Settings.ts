@@ -234,6 +234,35 @@ export function getAllSettings(): Record<string, unknown> {
   return { ...S };
 }
 
+// ——— Server-side persistence (cross-origin sync) ————————————————————————
+
+export async function saveSettingsToServer() {
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(S, jsonReplacer),
+    });
+  } catch { /* ignore network errors */ }
+}
+
+export async function loadSettingsFromServer() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const text = await res.text();
+    if (!text || text === '{}') return;
+    const saved = JSON.parse(text, jsonReviver);
+    Object.assign(S, saved);
+  } catch { /* ignore network errors */ }
+}
+
+export async function resetSettingsOnServer() {
+  try {
+    await fetch('/api/settings', { method: 'DELETE' });
+  } catch { /* ignore network errors */ }
+}
+
 // Initialize from localStorage on module load
 loadSettings();
 

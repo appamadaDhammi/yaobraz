@@ -86,7 +86,10 @@ import {
   SETTINGS_SECTIONS,
   getAllSettings,
   saveSettings,
+  saveSettingsToServer,
   resetSettings,
+  resetSettingsOnServer,
+  loadSettingsFromServer,
   getDefaults,
 } from '@/anti-tetris/Settings';
 
@@ -112,6 +115,7 @@ function jsonStringify(value: unknown): string {
 function apply(key: string, value: unknown) {
   form[key] = value;
   saveSettings({ [key]: value });
+  saveSettingsToServer();
 }
 
 function onNumberChange(key: string, e: Event) {
@@ -135,13 +139,20 @@ function onJsonChange(key: string, e: Event) {
 
 function handleReset() {
   resetSettings();
+  resetSettingsOnServer();
   const fresh = getDefaults();
   for (const k of Object.keys(fresh)) {
     form[k] = (fresh as Record<string, unknown>)[k];
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadSettingsFromServer();
+  const fresh = getAllSettings();
+  for (const k of Object.keys(fresh)) {
+    form[k] = (fresh as Record<string, unknown>)[k];
+  }
+
   currentUrl.value = window.location.href;
   gameUrl.value = `${window.location.origin}/anti-tetris`;
   settingsUrl.value = `${window.location.origin}/settings`;
