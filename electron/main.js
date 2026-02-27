@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron';
+import { app, BrowserWindow, Menu, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,7 +8,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const createWindow = () => {
+  // Open on the display where the mouse cursor currently is
+  const cursorPoint = screen.getCursorScreenPoint();
+  const targetDisplay = screen.getDisplayNearestPoint(cursorPoint);
+  const { x, y, width, height } = targetDisplay.bounds;
+
   const mainWindow = new BrowserWindow({
+    x,
+    y,
+    width,
+    height,
     kiosk: true,
     fullscreen: true,
     autoHideMenuBar: true,
