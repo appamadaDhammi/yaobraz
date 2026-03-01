@@ -1,6 +1,5 @@
 import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import basicSsl from '@vitejs/plugin-basic-ssl'
 import { fileURLToPath, URL } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -61,7 +60,6 @@ function settingsApiPlugin(): Plugin {
 export default defineConfig({
   plugins: [
     vue(),
-    basicSsl(),
     settingsApiPlugin(),
   ],
   resolve: {

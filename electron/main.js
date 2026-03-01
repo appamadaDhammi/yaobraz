@@ -2,8 +2,6 @@ import { app, BrowserWindow, Menu, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-app.commandLine.appendSwitch('ignore-certificate-errors');
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -50,7 +48,7 @@ const createWindow = () => {
     }
   });
 
-  mainWindow.loadURL('https://localhost:5173/anti-tetris');
+  mainWindow.loadURL('http://localhost:5173/anti-tetris');
 };
 
 app.whenReady().then(() => {
