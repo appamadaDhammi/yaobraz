@@ -18,6 +18,8 @@ const createWindow = () => {
     height,
     kiosk: true,
     fullscreen: true,
+    frame: false,
+    closable: false,
     autoHideMenuBar: true,
     alwaysOnTop: true,
     webPreferences: {
@@ -38,6 +40,10 @@ const createWindow = () => {
     if (input.shift && input.alt && input.key.toLowerCase() === 'r') {
       mainWindow.webContents.reload();
       event.preventDefault();
+    }
+    // Shift + Alt + Q → Quit kiosk
+    if (input.shift && input.alt && input.key.toLowerCase() === 'q') {
+      app.exit(0);
     }
     // Shift + Alt + K → Toggle cursor visibility
     if (input.shift && input.alt && input.key.toLowerCase() === 'k') {
